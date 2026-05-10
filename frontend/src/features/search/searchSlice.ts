@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../../app/rootReducer';
-import type { SearchState, SearchFilters, FlightOffer } from './search.types';
+import type { SearchState, SearchFilters, FlightOffer, CabinClass } from './search.types';
 
 const initialState: SearchState = {
   filters: {
@@ -8,6 +8,7 @@ const initialState: SearchState = {
     maxPrice: null,
   },
   selectedOffer: null,
+  lastCabinClass: 'ECONOMY',
 };
 
 const searchSlice = createSlice({
@@ -23,12 +24,16 @@ const searchSlice = createSlice({
     clearSelectedOffer(state) {
       state.selectedOffer = null;
     },
+    setCabinClass(state, action: PayloadAction<CabinClass>) {
+      state.lastCabinClass = action.payload;
+    },
   },
 });
 
-export const { setFilters, setSelectedOffer, clearSelectedOffer } = searchSlice.actions;
+export const { setFilters, setSelectedOffer, clearSelectedOffer, setCabinClass } = searchSlice.actions;
 export const searchReducer = searchSlice.reducer;
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
 export const selectFilters = (state: RootState) => state.search.filters;
 export const selectSelectedOffer = (state: RootState) => state.search.selectedOffer;
+export const selectLastCabinClass = (state: RootState) => state.search.lastCabinClass;

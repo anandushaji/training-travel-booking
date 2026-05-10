@@ -13,6 +13,7 @@ describe('rootReducer', () => {
     expect(state.search).toEqual({
       filters: { sortBy: 'price', maxPrice: null },
       selectedOffer: null,
+      lastCabinClass: 'ECONOMY',
     });
   });
 

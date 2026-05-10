@@ -48,11 +48,11 @@ describe('ReservationsController', () => {
     await app.close();
   });
 
-  // POST /api/v1/flights/reservations
+  // POST /api/v1/inventory/flights/reservations
   it('should return 400 when Idempotency-Key header is absent', async () => {
     const resp = await request(app.getHttpServer())
-      .post('/api/v1/flights/reservations')
-      .set('x-user-role', 'Employee')
+      .post('/api/v1/inventory/flights/reservations')
+      .set('x-user-role', 'EMPLOYEE')
       .send({ offerId: 'offer-1', passengerId: VALID_UUID, cabinClass: 'ECONOMY' });
 
     expect(resp.status).toBe(400);
@@ -60,8 +60,8 @@ describe('ReservationsController', () => {
 
   it('should return 400 when Idempotency-Key is not a valid UUID', async () => {
     const resp = await request(app.getHttpServer())
-      .post('/api/v1/flights/reservations')
-      .set('x-user-role', 'Employee')
+      .post('/api/v1/inventory/flights/reservations')
+      .set('x-user-role', 'EMPLOYEE')
       .set('idempotency-key', 'not-a-uuid')
       .send({ offerId: 'offer-1', passengerId: VALID_UUID, cabinClass: 'ECONOMY' });
 
@@ -72,8 +72,8 @@ describe('ReservationsController', () => {
     createUseCase.execute.mockResolvedValueOnce({ response: RESERVATION_RESPONSE, isNew: true });
 
     const resp = await request(app.getHttpServer())
-      .post('/api/v1/flights/reservations')
-      .set('x-user-role', 'Employee')
+      .post('/api/v1/inventory/flights/reservations')
+      .set('x-user-role', 'EMPLOYEE')
       .set('idempotency-key', VALID_UUID)
       .send({ offerId: 'offer-1', passengerId: VALID_UUID, cabinClass: 'ECONOMY' });
 
@@ -85,8 +85,8 @@ describe('ReservationsController', () => {
     createUseCase.execute.mockResolvedValueOnce({ response: RESERVATION_RESPONSE, isNew: false });
 
     const resp = await request(app.getHttpServer())
-      .post('/api/v1/flights/reservations')
-      .set('x-user-role', 'Employee')
+      .post('/api/v1/inventory/flights/reservations')
+      .set('x-user-role', 'EMPLOYEE')
       .set('idempotency-key', VALID_UUID)
       .send({ offerId: 'offer-1', passengerId: VALID_UUID, cabinClass: 'ECONOMY' });
 
@@ -97,8 +97,8 @@ describe('ReservationsController', () => {
     createUseCase.execute.mockResolvedValueOnce({ response: RESERVATION_RESPONSE, isNew: true });
 
     await request(app.getHttpServer())
-      .post('/api/v1/flights/reservations')
-      .set('x-user-role', 'Employee')
+      .post('/api/v1/inventory/flights/reservations')
+      .set('x-user-role', 'EMPLOYEE')
       .set('idempotency-key', VALID_UUID)
       .set('x-correlation-id', 'corr-abc')
       .send({ offerId: 'offer-1', passengerId: VALID_UUID, cabinClass: 'ECONOMY' });
@@ -112,8 +112,8 @@ describe('ReservationsController', () => {
     createUseCase.execute.mockResolvedValueOnce({ response: RESERVATION_RESPONSE, isNew: true });
 
     await request(app.getHttpServer())
-      .post('/api/v1/flights/reservations')
-      .set('x-user-role', 'Employee')
+      .post('/api/v1/inventory/flights/reservations')
+      .set('x-user-role', 'EMPLOYEE')
       .set('idempotency-key', VALID_UUID)
       .send({ offerId: 'offer-1', passengerId: VALID_UUID, cabinClass: 'ECONOMY' });
 
@@ -121,26 +121,26 @@ describe('ReservationsController', () => {
     expect(callArg).not.toHaveProperty('correlationId');
   });
 
-  // GET /api/v1/flights/reservations/:reservationId
+  // GET /api/v1/inventory/flights/reservations/:reservationId
   it('should return 200 and reservation data on GET by id', async () => {
     getUseCase.execute.mockResolvedValueOnce(RESERVATION_RESPONSE);
 
     const resp = await request(app.getHttpServer())
-      .get(`/api/v1/flights/reservations/${VALID_UUID}`)
-      .set('x-user-role', 'Employee');
+      .get(`/api/v1/inventory/flights/reservations/${VALID_UUID}`)
+      .set('x-user-role', 'EMPLOYEE');
 
     expect(resp.status).toBe(200);
     expect(resp.body).toMatchObject({ reservationId: 'res-uuid-1' });
     expect(getUseCase.execute).toHaveBeenCalledWith({ reservationId: VALID_UUID });
   });
 
-  // DELETE /api/v1/flights/reservations/:reservationId
+  // DELETE /api/v1/inventory/flights/reservations/:reservationId
   it('should return 204 on successful cancel', async () => {
     cancelUseCase.execute.mockResolvedValueOnce(undefined);
 
     const resp = await request(app.getHttpServer())
-      .delete(`/api/v1/flights/reservations/${VALID_UUID}`)
-      .set('x-user-role', 'Employee');
+      .delete(`/api/v1/inventory/flights/reservations/${VALID_UUID}`)
+      .set('x-user-role', 'EMPLOYEE');
 
     expect(resp.status).toBe(204);
     expect(cancelUseCase.execute).toHaveBeenCalledWith(
@@ -152,8 +152,8 @@ describe('ReservationsController', () => {
     cancelUseCase.execute.mockResolvedValueOnce(undefined);
 
     await request(app.getHttpServer())
-      .delete(`/api/v1/flights/reservations/${VALID_UUID}`)
-      .set('x-user-role', 'Employee')
+      .delete(`/api/v1/inventory/flights/reservations/${VALID_UUID}`)
+      .set('x-user-role', 'EMPLOYEE')
       .set('x-correlation-id', 'corr-xyz');
 
     expect(cancelUseCase.execute).toHaveBeenCalledWith(
@@ -165,8 +165,8 @@ describe('ReservationsController', () => {
     cancelUseCase.execute.mockResolvedValueOnce(undefined);
 
     await request(app.getHttpServer())
-      .delete(`/api/v1/flights/reservations/${VALID_UUID}`)
-      .set('x-user-role', 'Employee');
+      .delete(`/api/v1/inventory/flights/reservations/${VALID_UUID}`)
+      .set('x-user-role', 'EMPLOYEE');
 
     const callArg = cancelUseCase.execute.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(callArg).not.toHaveProperty('correlationId');

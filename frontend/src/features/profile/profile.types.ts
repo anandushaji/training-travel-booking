@@ -62,6 +62,7 @@ export interface TravelerProfile {
 }
 
 export interface UpdateTravelerRequest {
+  name?: string | undefined;
   department?: string | undefined;
   jobTitle?: string | undefined;
   level?: string | undefined;

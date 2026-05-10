@@ -1,4 +1,4 @@
-import { IsDateString, IsNotEmpty, IsOptional, IsUUID, IsInt, Min } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, IsUUID, IsInt, IsIn, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExpenseQueryDto {
@@ -13,6 +13,10 @@ export class ExpenseQueryDto {
   @IsOptional()
   @IsUUID()
   travelerId?: string;
+
+  @IsOptional()
+  @IsIn(['department', 'traveler', 'month', 'category'])
+  groupBy?: 'department' | 'traveler' | 'month' | 'category';
 
   @IsOptional()
   @Type(() => Number)

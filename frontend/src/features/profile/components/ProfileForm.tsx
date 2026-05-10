@@ -6,6 +6,7 @@ import { useUpdateTravelerMutation } from '../travelerApi';
 import type { TravelerProfile, UpdateTravelerRequest } from '../profile.types';
 
 interface ProfileFormValues {
+  fullName: string;
   department: string;
   jobTitle: string;
   costCenter: string;
@@ -22,6 +23,7 @@ export function ProfileForm({ profile }: ProfileFormProps): React.ReactElement {
 
   const { register, control, handleSubmit } = useForm<ProfileFormValues>({
     defaultValues: {
+      fullName: profile.fullName ?? '',
       department: profile.department,
       jobTitle: profile.jobTitle ?? '',
       costCenter: profile.costCenter ?? '',
@@ -31,6 +33,7 @@ export function ProfileForm({ profile }: ProfileFormProps): React.ReactElement {
 
   const onSubmit = async (values: ProfileFormValues) => {
     const body: UpdateTravelerRequest = {
+      name: values.fullName || undefined,
       department: values.department,
       jobTitle: values.jobTitle || undefined,
       costCenter: values.costCenter || undefined,
@@ -46,14 +49,13 @@ export function ProfileForm({ profile }: ProfileFormProps): React.ReactElement {
       onSubmit={(e) => { void handleSubmit(onSubmit)(e); }}
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}
     >
-      {/* Read-only fields */}
+      {/* Editable identity field */}
       <TextInput
-        name="fullName"
         label="Full Name"
-        value={profile.fullName}
-        InputProps={{ readOnly: true }}
         data-testid="field-fullName"
+        {...register('fullName')}
       />
+      {/* Read-only fields */}
       <TextInput
         name="email"
         label="Email"

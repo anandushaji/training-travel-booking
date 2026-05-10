@@ -1,8 +1,9 @@
 import React from 'react';
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import type { Dayjs } from 'dayjs';
 
 export interface DatePickerInputProps {
   name: string;
@@ -25,15 +26,13 @@ export function DatePickerInput({
   error,
   disabled,
 }: DatePickerInputProps): React.ReactElement {
-  // Lazy-import dayjs to avoid pulling it in if not used
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const dayjs = require('dayjs') as (v?: unknown) => Dayjs;
-
   const handleChange = (newValue: Dayjs | null) => {
     if (newValue === null || !newValue.isValid()) {
       onChange(null);
     } else {
-      onChange(newValue.toISOString());
+      // Emit date-only ISO string (YYYY-MM-DD) — full datetimes cause 400s on
+      // APIs that expect a plain date (e.g. flight search, Amadeus).
+      onChange(newValue.format('YYYY-MM-DD'));
     }
   };
 

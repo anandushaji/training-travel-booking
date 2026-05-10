@@ -10,7 +10,7 @@ export const flightApi = baseApi.injectEndpoints({
           origin: params.origin,
           destination: params.destination,
           departureDate: params.departureDate,
-          adults: params.adults,
+          passengers: params.adults,
           ...(params.returnDate !== undefined ? { returnDate: params.returnDate } : {}),
           ...(params.cabinClass !== undefined ? { cabinClass: params.cabinClass } : {}),
           ...(params.nonStop !== undefined ? { nonStop: params.nonStop } : {}),

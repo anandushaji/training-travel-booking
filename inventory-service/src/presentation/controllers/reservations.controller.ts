@@ -20,7 +20,7 @@ import { CreateReservationRequestDto } from '../dto/create-reservation-request.d
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
 
-@Controller('api/v1/flights/reservations')
+@Controller('api/v1/inventory/flights/reservations')
 @UseGuards(new RolesGuard(new Reflector()))
 export class ReservationsController {
   constructor(
@@ -30,7 +30,7 @@ export class ReservationsController {
   ) {}
 
   @Post()
-  @Roles('Employee', 'Manager', 'Admin')
+  @Roles('EMPLOYEE', 'MANAGER', 'ADMIN')
   async create(
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Headers('x-correlation-id') correlationId: string | undefined,
@@ -57,14 +57,14 @@ export class ReservationsController {
   }
 
   @Get(':reservationId')
-  @Roles('Employee', 'Manager', 'Admin')
+  @Roles('EMPLOYEE', 'MANAGER', 'ADMIN')
   async getOne(@Param('reservationId') reservationId: string) {
     return this.getReservationUseCase.execute({ reservationId });
   }
 
   @Delete(':reservationId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles('Employee', 'Manager', 'Admin')
+  @Roles('EMPLOYEE', 'MANAGER', 'ADMIN')
   async cancel(
     @Param('reservationId') reservationId: string,
     @Headers('x-correlation-id') correlationId: string | undefined,

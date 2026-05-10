@@ -50,6 +50,16 @@ function makeJwtService(): jest.Mocked<JwtService> {
       }
       throw new Error('invalid');
     }),
+    decode: jest.fn((token: string) => {
+      // Mock token format: "mocked.jwt.<JSON>" — parse last segment for payload
+      const parts = token.split('mocked.jwt.');
+      const jsonStr = parts[1] ?? '{}';
+      try {
+        return { ...JSON.parse(jsonStr), iat: 1000000, exp: 1028800 };
+      } catch {
+        return { iat: 1000000, exp: 1028800 };
+      }
+    }),
   } as unknown as jest.Mocked<JwtService>;
   return service;
 }

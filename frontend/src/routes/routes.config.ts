@@ -9,8 +9,10 @@ export const ROUTES = {
   BOOKING_CONFIRMATION: '/bookings/:id/confirmation',
   PROFILE: '/profile',
   EXPENSES: '/expenses',
+  EXPENSE_REPORT: '/expenses/report',
   RECEIPT_DETAIL: '/expenses/receipts/:receiptId',
   ADMIN_TRAVELERS: '/admin/travelers',
+  ADMIN_TRAVELER_DETAIL: '/admin/travelers/:travelerId',
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

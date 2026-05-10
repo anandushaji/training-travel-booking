@@ -27,7 +27,7 @@ export class ProxyRoutingController {
   ) {}
 
   @All('*')
-  async proxy(@Req() req: Request & { correlationId?: string; idempotencyKey?: string }, @Res() res: Response): Promise<void> {
+  async proxy(@Req() req: Request & { correlationId?: string; idempotencyKey?: string; user?: { sub?: string; email?: string; role?: string } }, @Res() res: Response): Promise<void> {
     const path = req.path;
     const route = this.routeTable.find((r) => path.startsWith(r.prefix));
 
@@ -48,6 +48,10 @@ export class ProxyRoutingController {
     }
     if (req.correlationId) headers['X-Correlation-ID'] = req.correlationId;
     if (req.idempotencyKey) headers['Idempotency-Key'] = req.idempotencyKey;
+    // Inject verified identity claims for downstream service authorisation
+    if (req.user?.role) headers['X-User-Role'] = req.user.role;
+    if (req.user?.sub) headers['X-User-ID'] = req.user.sub;
+    if (req.user?.email) headers['X-User-Email'] = req.user.email;
 
     try {
       const response = await this.proxyClient.request(route.serviceName, {
@@ -55,7 +59,6 @@ export class ProxyRoutingController {
         url: fullUrl,
         headers,
         data: req.body as unknown,
-        params: req.query,
         ...(req.correlationId ? { correlationId: req.correlationId } : {}),
         ...(req.idempotencyKey ? { idempotencyKey: req.idempotencyKey } : {}),
       });

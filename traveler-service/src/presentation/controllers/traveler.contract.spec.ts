@@ -109,14 +109,22 @@ describe('TravelerController — contract shape validation', () => {
     expect(res.body).toMatchObject(TRAVELER_RESPONSE_SHAPE);
   });
 
-  it('GET /travelers → 200 array of TravelerResponse shape', async () => {
+  it('GET /travelers → 200 paginated TravelerListResponse shape', async () => {
     mocks.getTravelers.execute.mockResolvedValue([sampleDto]);
     const res = await request(app.getHttpServer())
       .get('/travelers')
       .set('Authorization', createJwtHeader('MANAGER'))
       .expect(200);
-    expect(res.body).toBeInstanceOf(Array);
-    expect(res.body[0]).toMatchObject(TRAVELER_RESPONSE_SHAPE);
+    expect(res.body).toMatchObject({
+      travelers: expect.any(Array),
+      pagination: expect.objectContaining({
+        currentPage: expect.any(Number),
+        totalPages: expect.any(Number),
+        totalItems: expect.any(Number),
+        limit: expect.any(Number),
+      }),
+    });
+    expect(res.body.travelers[0]).toMatchObject(TRAVELER_RESPONSE_SHAPE);
   });
 
   it('GET /travelers/:id → 200 TravelerResponse shape', async () => {

@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../auth/authSlice';
 import { useListReceiptsQuery } from '../expenseApi';
 import { ExpenseList } from '../components/ExpenseList';
-import { Skeleton, Alert, TextInput } from '../../../common/components';
+import { Skeleton, Alert } from '../../../common/components';
+import { DatePickerInput } from '../../../common/components/Form/DatePickerInput';
+import { TextInput } from '../../../common/components/Form/TextInput';
+
+const PAGE_LIMIT = 10;
 
 export function ExpenseListPage(): React.ReactElement {
   const user = useSelector(selectUser);
   const isAdminOrManager = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
   const [department, setDepartment] = useState('');
 
   const queryParams = isAdminOrManager
@@ -19,10 +24,14 @@ export function ExpenseListPage(): React.ReactElement {
         ...(startDate ? { startDate } : {}),
         ...(endDate ? { endDate } : {}),
         ...(department ? { department } : {}),
+        page,
+        limit: PAGE_LIMIT,
       }
-    : { travelerId: user?.id ?? '' };
+    : { travelerId: user?.id ?? '', page, limit: PAGE_LIMIT };
 
   const { data, isLoading, isError } = useListReceiptsQuery(queryParams);
+
+  const pagination = data?.pagination;
 
   if (isLoading) {
     return (
@@ -39,26 +48,28 @@ export function ExpenseListPage(): React.ReactElement {
       <Typography variant="h5" gutterBottom>My Expenses</Typography>
 
       {isAdminOrManager && (
-        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-          <TextInput
-            name="startDate"
-            label="Start Date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            data-testid="filter-start-date"
-          />
-          <TextInput
-            name="endDate"
-            label="End Date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            data-testid="filter-end-date"
-          />
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <Box data-testid="filter-start-date">
+            <DatePickerInput
+              name="startDate"
+              label="Start Date"
+              value={startDate}
+              onChange={(d) => { setStartDate(d); setPage(1); }}
+            />
+          </Box>
+          <Box data-testid="filter-end-date">
+            <DatePickerInput
+              name="endDate"
+              label="End Date"
+              value={endDate}
+              onChange={(d) => { setEndDate(d); setPage(1); }}
+            />
+          </Box>
           <TextInput
             name="department"
             label="Department"
             value={department}
-            onChange={(e) => setDepartment(e.target.value)}
+            onChange={(e) => { setDepartment(e.target.value); setPage(1); }}
             data-testid="filter-department"
           />
         </Box>
@@ -69,7 +80,35 @@ export function ExpenseListPage(): React.ReactElement {
       )}
 
       {!isError && (
-        <ExpenseList receipts={data?.receipts ?? []} />
+        <>
+          <ExpenseList receipts={data?.receipts ?? []} />
+
+          {pagination && pagination.totalPages > 1 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 3 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                data-testid="expense-pagination-prev"
+              >
+                Previous
+              </Button>
+              <Typography variant="body2">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                disabled={page >= pagination.totalPages}
+                data-testid="expense-pagination-next"
+              >
+                Next
+              </Button>
+            </Box>
+          )}
+        </>
       )}
     </Box>
   );

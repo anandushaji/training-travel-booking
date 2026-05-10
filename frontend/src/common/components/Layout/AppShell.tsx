@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import FlightIcon from '@mui/icons-material/Flight';
 import BookOnlineIcon from '@mui/icons-material/BookOnline';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import PersonIcon from '@mui/icons-material/Person';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -22,15 +23,26 @@ const BASE_NAV: NavItem[] = [
   { label: 'My Profile',     path: ROUTES.PROFILE,       icon: PersonIcon },
 ];
 
-const ADMIN_NAV: NavItem[] = [
+const MANAGER_NAV: NavItem[] = [
   ...BASE_NAV,
+  { label: 'Expense Report', path: ROUTES.EXPENSE_REPORT, icon: AssessmentIcon },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  ...MANAGER_NAV,
   { label: 'Admin Panel', path: ROUTES.ADMIN_TRAVELERS, icon: AdminPanelSettingsIcon },
 ];
+
+function getNavItems(role?: string): NavItem[] {
+  if (role === 'ADMIN') return ADMIN_NAV;
+  if (role === 'MANAGER') return MANAGER_NAV;
+  return BASE_NAV;
+}
 
 export function AppShell(): React.ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = useSelector(selectUser);
-  const navItems = user?.role === 'ADMIN' ? ADMIN_NAV : BASE_NAV;
+  const navItems = getNavItems(user?.role);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>

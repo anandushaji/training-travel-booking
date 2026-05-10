@@ -32,10 +32,14 @@ export class AmadeusHttpClient {
   // Circuit breaker wraps the entire retry-capable call
   private readonly breaker: CircuitBreaker<[() => Promise<unknown>], unknown>;
 
+  private readonly isConfigured: boolean;
+
   constructor(
     private readonly tokenService: AmadeusTokenService,
     private readonly config: ConfigService,
   ) {
+    const clientId = config.get<string>('AMADEUS_CLIENT_ID') ?? '';
+    this.isConfigured = clientId.length > 0 && clientId !== 'REPLACE_ME';
     const baseURL = this.config.get<string>('AMADEUS_BASE_URL') ?? 'https://test.api.amadeus.com';
 
     this.axiosInstance = axios.create({
@@ -128,9 +132,64 @@ export class AmadeusHttpClient {
   }
 
   async searchFlights(params: Record<string, unknown>): Promise<unknown> {
+    if (!this.isConfigured) {
+      this.logger.warn('Amadeus not configured — returning mock flight data');
+      return this._mockFlights(params);
+    }
     return this._execute(() =>
       this.axiosInstance.get('/v2/shopping/flight-offers', { params }).then((r) => r.data),
     );
+  }
+
+  private _mockFlights(params: Record<string, unknown>): unknown {
+    const origin = String(params['origin'] ?? 'LHR');
+    const destination = String(params['destination'] ?? 'JFK');
+    const departureDate = String(params['departureDate'] ?? new Date().toISOString().slice(0, 10));
+    const cabinClass = String(params['cabinClass'] ?? 'ECONOMY');
+
+    const fmtTime = (date: string, hour: number, min = 0) =>
+      `${date}T${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:00`;
+
+    return {
+      data: [
+        {
+          offerId: `mock-${origin}-${destination}-001`,
+          carrier: 'BA',
+          flightNumber: 'BA178',
+          origin,
+          destination,
+          departureAt: fmtTime(departureDate, 8, 30),
+          arrivalAt: fmtTime(departureDate, 11, 15),
+          cabinClass,
+          price: { amount: '450.00', currency: 'USD' },
+          seatsAvailable: 9,
+        },
+        {
+          offerId: `mock-${origin}-${destination}-002`,
+          carrier: 'LH',
+          flightNumber: 'LH401',
+          origin,
+          destination,
+          departureAt: fmtTime(departureDate, 11, 0),
+          arrivalAt: fmtTime(departureDate, 15, 45),
+          cabinClass,
+          price: { amount: '380.00', currency: 'USD' },
+          seatsAvailable: 5,
+        },
+        {
+          offerId: `mock-${origin}-${destination}-003`,
+          carrier: 'AA',
+          flightNumber: 'AA101',
+          origin,
+          destination,
+          departureAt: fmtTime(departureDate, 14, 0),
+          arrivalAt: fmtTime(departureDate, 19, 30),
+          cabinClass,
+          price: { amount: '520.00', currency: 'USD' },
+          seatsAvailable: 12,
+        },
+      ],
+    };
   }
 
   async createOrder(body: Record<string, unknown>): Promise<unknown> {

@@ -28,6 +28,6 @@ describe('baseApi', () => {
     for (const tag of TAG_TYPES) {
       expect(TAG_TYPES).toContain(tag);
     }
-    expect(TAG_TYPES).toHaveLength(6);
+    expect(TAG_TYPES).toHaveLength(8);
   });
 });

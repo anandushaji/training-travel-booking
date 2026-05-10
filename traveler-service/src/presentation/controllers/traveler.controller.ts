@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -56,8 +57,29 @@ export class TravelerController {
 
   @Get()
   @Roles('MANAGER', 'ADMIN')
-  findAll() {
-    return this.getTravelers.execute();
+  async findAll(
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+  ): Promise<{ travelers: import('../../application/dto/traveler-response.dto').TravelerResponseDto[]; pagination: { currentPage: number; totalPages: number; totalItems: number; limit: number } }> {
+    const page = Math.max(1, parseInt(pageStr ?? '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitStr ?? '20', 10) || 20));
+    const all = await this.getTravelers.execute();
+    const totalItems = all.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const currentPage = Math.min(page, totalPages);
+    const travelers = all.slice((currentPage - 1) * limit, currentPage * limit);
+    return { travelers, pagination: { currentPage, totalPages, totalItems, limit } };
+  }
+
+  @Get(':id/export')
+  @UseGuards(SelfOrAdminGuard)
+  @Roles('EMPLOYEE', 'MANAGER', 'ADMIN')
+  async exportGdprData(@Param('id') id: string) {
+    const [profile, preferences] = await Promise.all([
+      this.getTraveler.execute(id),
+      this.getPreferences.execute(id),
+    ]);
+    return { exportedAt: new Date().toISOString(), profile, preferences };
   }
 
   @Get(':id')
@@ -67,7 +89,8 @@ export class TravelerController {
   }
 
   @Patch(':id')
-  @Roles('MANAGER', 'ADMIN')
+  @UseGuards(SelfOrAdminGuard)
+  @Roles('EMPLOYEE', 'MANAGER', 'ADMIN')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTravelerDto,

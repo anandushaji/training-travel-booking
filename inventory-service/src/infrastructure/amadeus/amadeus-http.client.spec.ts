@@ -15,6 +15,7 @@ const makeConfig = (): ConfigService =>
   ({
     get: jest.fn((key: string) => {
       if (key === 'AMADEUS_BASE_URL') return BASE_URL;
+      if (key === 'AMADEUS_CLIENT_ID') return 'test-client-id';
       return undefined;
     }),
   } as unknown as ConfigService);

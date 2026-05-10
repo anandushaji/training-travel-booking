@@ -34,12 +34,12 @@ describe('ProxyHttpClient', () => {
   });
 
   it('should retry up to 3 times on 503 response and increment retry_count', async () => {
-    const err503 = Object.assign(new Error('503'), { isAxiosError: true, response: { status: 503 }, code: undefined });
+    const resp503 = { status: 503, data: { error: 'Service Unavailable' }, headers: {}, config: {}, statusText: 'Service Unavailable' };
     const successResponse = { status: 200, data: {}, headers: {}, config: {}, statusText: 'OK' };
     mockedAxios.request
-      .mockRejectedValueOnce(err503)
-      .mockRejectedValueOnce(err503)
-      .mockRejectedValueOnce(err503)
+      .mockResolvedValueOnce(resp503 as never)
+      .mockResolvedValueOnce(resp503 as never)
+      .mockResolvedValueOnce(resp503 as never)
       .mockResolvedValueOnce(successResponse as never);
 
     const retryMock = jest.fn();

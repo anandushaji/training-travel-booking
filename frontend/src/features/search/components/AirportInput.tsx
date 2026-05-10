@@ -23,6 +23,9 @@ export function AirportInput({
   'aria-label': ariaLabel,
 }: AirportInputProps): React.ReactElement {
   const [query, setQuery] = useState('');
+  // Cache the last selected option so the label stays visible even when the
+  // options list changes after selection (e.g. query was updated by Autocomplete).
+  const [cachedSelected, setCachedSelected] = useState<AirportOption | null>(null);
 
   const { data: airports, isFetching } = useSearchAirportsQuery(
     { q: query },
@@ -31,23 +34,35 @@ export function AirportInput({
 
   const options: AirportOption[] = airports ?? [];
 
-  // Find the AirportOption that matches the current IATA value
-  const selectedOption = options.find((o) => o.iata === value) ?? null;
+  // Prefer a live match from current results; fall back to the cached selection
+  // so the label is never lost when the options list refreshes.
+  const selectedOption: AirportOption | null = value
+    ? (options.find((o) => o.iata === value) ?? cachedSelected)
+    : null;
 
   return (
     <Autocomplete<AirportOption>
       options={options}
       loading={isFetching}
       value={selectedOption}
-      inputValue={query}
-      onInputChange={(_, newInputValue) => {
-        setQuery(newInputValue);
+      onInputChange={(_, newInputValue, reason) => {
+        // Only drive the API query when the user is actually typing.
+        // Ignore 'reset' (Autocomplete sets inputValue to the label on selection)
+        // to prevent a re-query that would wipe the selected option from the list.
+        if (reason === 'input') {
+          setQuery(newInputValue);
+        } else if (reason === 'clear') {
+          setQuery('');
+        }
       }}
       onChange={(_, newValue) => {
         if (newValue) {
           onChange(newValue.iata);
+          setCachedSelected(newValue);
         } else {
           onChange('');
+          setCachedSelected(null);
+          setQuery('');
         }
       }}
       getOptionLabel={(option) =>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useGetBookingsQuery } from '../bookingApi';
-import { StatusBadge, Skeleton, EmptyState } from '../../../common/components';
+import { StatusBadge, Skeleton, EmptyState, Alert } from '../../../common/components';
 import type { Booking, BookingStatus } from '../booking.types';
 import { ROUTES } from '../../../routes/routes.config';
 import type { StatusColor } from '../../../common/components/DataDisplay/StatusBadge';
@@ -20,7 +20,7 @@ interface BookingListProps {
 
 export function BookingList({ initialPage = 1 }: BookingListProps): React.ReactElement {
   const [page, setPage] = useState(initialPage);
-  const { data, isLoading } = useGetBookingsQuery({ page, limit: 20 });
+  const { data, isLoading, isError } = useGetBookingsQuery({ page, limit: 20 });
 
   if (isLoading) {
     return (
@@ -34,6 +34,16 @@ export function BookingList({ initialPage = 1 }: BookingListProps): React.ReactE
 
   const bookings = data?.bookings ?? [];
   const pagination = data?.pagination;
+
+  if (isError) {
+    return (
+      <Alert
+        data-testid="booking-list-error"
+        severity="error"
+        message="Could not load bookings. Please try again later."
+      />
+    );
+  }
 
   if (bookings.length === 0) {
     return (

@@ -5,6 +5,7 @@ export interface TravelerCacheDto {
   id: string;
   employeeId: string;
   name: string;
+  fullName: string;
   email: string;
   department: string;
   role: string;

@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { ProxyRoutingController } from './proxy-routing.controller';
@@ -17,11 +16,12 @@ function makeReq(path: string, method = 'GET'): {
   return { path, method, url: path, headers: {}, body: {}, query: {} };
 }
 
-function makeRes(): { status: jest.Mock; setHeader: jest.Mock; send: jest.Mock; _status?: number } {
-  const res = { _status: 200 } as { _status: number; status: jest.Mock; setHeader: jest.Mock; send: jest.Mock };
+function makeRes(): { status: jest.Mock; setHeader: jest.Mock; send: jest.Mock; json: jest.Mock; _status?: number } {
+  const res = { _status: 200 } as { _status: number; status: jest.Mock; setHeader: jest.Mock; send: jest.Mock; json: jest.Mock };
   res.status = jest.fn(() => res);
   res.setHeader = jest.fn();
   res.send = jest.fn();
+  res.json = jest.fn();
   return res;
 }
 
@@ -66,6 +66,9 @@ describe('ProxyRoutingController', () => {
       ['/api/v1/payments', 'http://payment:3004'],
       ['/api/v1/inventory', 'http://inventory:3005'],
       ['/api/v1/expenses', 'http://expense:3006'],
+      ['/api/v1/receipts', 'http://expense:3006'],
+      ['/api/v1/categories', 'http://expense:3006'],
+      ['/api/v1/admin/travelers', 'http://traveler:3003'],
     ] as [string, string][];
 
     for (const [path, expectedBase] of routes) {
@@ -78,9 +81,10 @@ describe('ProxyRoutingController', () => {
   });
 
   it('should return 404 for unrecognised route prefix', async () => {
-    await expect(
-      controller.proxy(makeReq('/api/v1/unknown') as never, makeRes() as never),
-    ).rejects.toThrow(NotFoundException);
+    const res = makeRes();
+    await controller.proxy(makeReq('/api/v1/unknown') as never, res as never);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Not Found' }));
   });
 
   it('should return downstream response status and body unchanged', async () => {
@@ -109,5 +113,50 @@ describe('ProxyRoutingController', () => {
     const res = makeRes();
     await controller.proxy(makeReq('/api/v1/bookings') as never, res as never);
     expect(res.setHeader).toHaveBeenCalledWith('x-request-id', 'abc-123');
+  });
+
+  it('should inject X-User-Role, X-User-ID, X-User-Email headers when req.user is populated', async () => {
+    (proxyClient.request as jest.Mock).mockResolvedValue({ status: 200, data: {}, headers: {} });
+    const req = {
+      ...makeReq('/api/v1/bookings'),
+      user: { role: 'MANAGER', sub: 'user-uuid-123', email: 'mgr@corp.com' },
+    };
+    const res = makeRes();
+    await controller.proxy(req as never, res as never);
+    const calledHeaders: Record<string, string> = (proxyClient.request as jest.Mock).mock.calls.at(-1)?.[1]?.headers;
+    expect(calledHeaders?.['X-User-Role']).toBe('MANAGER');
+    expect(calledHeaders?.['X-User-ID']).toBe('user-uuid-123');
+    expect(calledHeaders?.['X-User-Email']).toBe('mgr@corp.com');
+  });
+
+  it('should NOT inject identity headers when req.user is absent', async () => {
+    (proxyClient.request as jest.Mock).mockResolvedValue({ status: 200, data: {}, headers: {} });
+    const res = makeRes();
+    await controller.proxy(makeReq('/api/v1/bookings') as never, res as never);
+    const calledHeaders: Record<string, string> = (proxyClient.request as jest.Mock).mock.calls.at(-1)?.[1]?.headers;
+    expect(calledHeaders?.['X-User-Role']).toBeUndefined();
+  });
+
+  it('should return 502 when downstream request throws', async () => {
+    (proxyClient.request as jest.Mock).mockRejectedValue(new Error('Network error'));
+    const res = makeRes();
+    (res as unknown as { headersSent: boolean }).headersSent = false;
+    await controller.proxy(makeReq('/api/v1/bookings') as never, res as never);
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Bad Gateway' }));
+  });
+
+  it('should forward X-Correlation-ID and Idempotency-Key headers when set on req', async () => {
+    (proxyClient.request as jest.Mock).mockResolvedValue({ status: 200, data: {}, headers: {} });
+    const req = {
+      ...makeReq('/api/v1/bookings'),
+      correlationId: 'corr-123',
+      idempotencyKey: 'idem-456',
+    };
+    const res = makeRes();
+    await controller.proxy(req as never, res as never);
+    const calledHeaders: Record<string, string> = (proxyClient.request as jest.Mock).mock.calls.at(-1)?.[1]?.headers;
+    expect(calledHeaders?.['X-Correlation-ID']).toBe('corr-123');
+    expect(calledHeaders?.['Idempotency-Key']).toBe('idem-456');
   });
 });

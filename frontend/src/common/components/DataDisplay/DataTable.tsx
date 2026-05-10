@@ -26,6 +26,7 @@ export interface DataTableProps<T extends { id: string | number }> {
   rows: T[];
   loading?: boolean;
   onSort?: (key: string, direction: SortDirection) => void;
+  onRowClick?: (row: T) => void;
   rowsPerPageOptions?: number[];
   defaultRowsPerPage?: number;
 }
@@ -35,6 +36,7 @@ export function DataTable<T extends { id: string | number }>({
   rows,
   loading = false,
   onSort,
+  onRowClick,
   rowsPerPageOptions = [10, 25, 50],
   defaultRowsPerPage = 10,
 }: DataTableProps<T>): React.ReactElement {
@@ -87,7 +89,12 @@ export function DataTable<T extends { id: string | number }>({
                   </TableRow>
                 ))
               : paginatedRows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow
+                    key={row.id}
+                    hover={Boolean(onRowClick)}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    sx={onRowClick ? { cursor: 'pointer' } : {}}
+                  >
                     {columns.map((col) => (
                       <TableCell key={col.key}>
                         {col.render

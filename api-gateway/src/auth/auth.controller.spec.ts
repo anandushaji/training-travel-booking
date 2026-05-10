@@ -26,7 +26,7 @@ describe('AuthController', () => {
   });
 
   it('should return 200 with accessToken and refreshToken for valid credentials', async () => {
-    const mockResult = { accessToken: 'access.jwt', refreshToken: 'refresh.jwt', expiresIn: 28800 };
+    const mockResult = { accessToken: 'access.jwt', refreshToken: 'refresh.jwt', expiresIn: 28800, user: { id: 'u-1', email: 'alice@corp.com', role: 'EMPLOYEE' as const, iat: 0, exp: 0 } };
     authService.login.mockResolvedValue(mockResult);
 
     const result = await controller.login(
@@ -51,7 +51,7 @@ describe('AuthController', () => {
   });
 
   it('should return 200 with new accessToken and new refreshToken for valid refresh token', async () => {
-    const mockResult = { accessToken: 'new.access.jwt', refreshToken: 'new.refresh.jwt', expiresIn: 28800 };
+    const mockResult = { accessToken: 'new.access.jwt', refreshToken: 'new.refresh.jwt', expiresIn: 28800, user: { id: 'u-1', email: 'alice@corp.com', role: 'EMPLOYEE' as const, iat: 0, exp: 0 } };
     authService.refresh.mockResolvedValue(mockResult);
 
     const result = await controller.refresh({ refreshToken: 'valid.refresh.jwt' });

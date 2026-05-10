@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, RadioGroup, FormControlLabel, Radio, FormControl, FormLabel, Divider } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { Button, Alert, Spinner } from '../../../common/components';
-import { selectSelectedOffer } from '../../search/searchSlice';
+import { selectSelectedOffer, selectLastCabinClass } from '../../search/searchSlice';
 import { selectUser } from '../../auth/authSlice';
 import { useBooking } from '../hooks/useBooking';
 import type { PaymentMethod } from '../booking.types';
@@ -14,6 +14,7 @@ interface BookingFormValues {
 
 export function BookingForm(): React.ReactElement {
   const selectedOffer = useSelector(selectSelectedOffer);
+  const cabinClass = useSelector(selectLastCabinClass);
   const user = useSelector(selectUser);
   const { submit, isSubmitting, error } = useBooking();
 
@@ -30,7 +31,7 @@ export function BookingForm(): React.ReactElement {
         origin: selectedOffer.origin,
         destination: selectedOffer.destination,
         departureDate: selectedOffer.departureTime.split('T')[0],
-        cabinClass: 'ECONOMY',
+        cabinClass: cabinClass,
         passengers: 1,
       },
       paymentMethod: values.paymentMethod,

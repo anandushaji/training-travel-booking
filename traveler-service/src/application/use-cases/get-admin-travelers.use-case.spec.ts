@@ -6,6 +6,7 @@ import { TravelerPreferences } from '../../domain/value-objects/traveler-prefere
 const makeRepo = () =>
   ({
     findByEmployeeId: jest.fn(),
+    findByEmail: jest.fn(),
     findById: jest.fn(),
     findAll: jest.fn(),
     save: jest.fn(),

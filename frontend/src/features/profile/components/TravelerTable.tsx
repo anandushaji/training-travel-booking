@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Box } from '@mui/material';
-import { DataTable, StatusBadge, EmptyState, TextInput, Skeleton } from '../../../common/components';
+import { Box, Button, Typography } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { DataTable, StatusBadge, EmptyState, TextInput, Skeleton, Alert } from '../../../common/components';
 import { useListTravelersQuery } from '../travelerApi';
 import { useDebounce } from '../../../common/hooks/useDebounce';
 import type { TravelerProfile } from '../profile.types';
 import type { Column } from '../../../common/components';
+import { ROUTES } from '../../../routes/routes.config';
 
 const ACTIVE_COLOR_MAP: Record<string, 'success' | 'error'> = {
   Active: 'success',
@@ -29,15 +31,21 @@ const COLUMNS: Column<TravelerProfile>[] = [
 ];
 
 export function TravelerTable(): React.ReactElement {
-  const [page] = useState(1);
+  const navigate = useNavigate();
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
 
-  const { data, isLoading } = useListTravelersQuery({
+  const { data, isLoading, isError } = useListTravelersQuery({
     page,
     limit: 20,
     q: debouncedSearch || undefined,
   });
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1); // reset to first page on new search
+  };
 
   if (isLoading) {
     return (
@@ -49,7 +57,16 @@ export function TravelerTable(): React.ReactElement {
     );
   }
 
+  if (isError) {
+    return (
+      <Box data-testid="traveler-table-error">
+        <Alert severity="error" message="Could not load travelers. Please try again." />
+      </Box>
+    );
+  }
+
   const travelers = data?.travelers ?? [];
+  const pagination = data?.pagination;
 
   return (
     <Box data-testid="traveler-table">
@@ -58,7 +75,7 @@ export function TravelerTable(): React.ReactElement {
           name="traveler-search"
           label="Search travelers"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
           data-testid="traveler-search"
         />
       </Box>
@@ -71,11 +88,44 @@ export function TravelerTable(): React.ReactElement {
           />
         </Box>
       ) : (
-        <DataTable<TravelerProfile>
-          columns={COLUMNS}
-          rows={travelers}
-          loading={isLoading}
-        />
+        <>
+          <DataTable<TravelerProfile>
+            columns={COLUMNS}
+            rows={travelers}
+            loading={isLoading}
+            defaultRowsPerPage={20}
+            rowsPerPageOptions={[20]}
+            onRowClick={(row) => {
+              const path = ROUTES.ADMIN_TRAVELER_DETAIL.replace(':travelerId', row.id);
+              navigate(path);
+            }}
+          />
+          {pagination && pagination.totalPages > 1 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, mt: 2 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                data-testid="traveler-pagination-prev"
+              >
+                Previous
+              </Button>
+              <Typography variant="body2">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                disabled={page >= pagination.totalPages}
+                data-testid="traveler-pagination-next"
+              >
+                Next
+              </Button>
+            </Box>
+          )}
+        </>
       )}
     </Box>
   );

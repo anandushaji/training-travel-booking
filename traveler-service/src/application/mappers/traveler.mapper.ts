@@ -66,6 +66,7 @@ export class TravelerMapper {
       id: aggregate.id,
       employeeId: aggregate.employeeId,
       name: aggregate.name,
+      fullName: aggregate.name,
       email: aggregate.email,
       department: aggregate.department,
       role: aggregate.role,

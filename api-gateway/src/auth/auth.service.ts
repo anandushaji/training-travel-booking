@@ -123,7 +123,21 @@ export class AuthService {
 
     await this.storeRefreshToken(refreshToken, authResult.userId);
 
-    const result: LoginResponseDto = { accessToken, refreshToken, expiresIn: 28800 };
+    // Decode the signed token to get iat/exp without a second sign call
+    const decoded = this.jwtService.decode(accessToken) as JwtPayload & { iat: number; exp: number };
+
+    const result: LoginResponseDto = {
+      accessToken,
+      refreshToken,
+      expiresIn: 28800,
+      user: {
+        id: authResult.userId,
+        email: authResult.email,
+        role: authResult.role,
+        exp: decoded.exp,
+        iat: decoded.iat,
+      },
+    };
 
     // Store in idempotency cache (atomic NX EX, fail-open)
     try {
@@ -162,6 +176,20 @@ export class AuthService {
 
     await this.storeRefreshToken(newRefreshToken, userId);
 
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken, expiresIn: 28800 };
+    // Decode to get iat/exp for the user field
+    const decoded = this.jwtService.decode(newAccessToken) as JwtPayload & { iat: number; exp: number };
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      expiresIn: 28800,
+      user: {
+        id: userId,
+        email: payload.email,
+        role: payload.role,
+        exp: decoded.exp,
+        iat: decoded.iat,
+      },
+    };
   }
 }

@@ -49,7 +49,7 @@ describe('flightApi', () => {
       expect(capturedUrl!.searchParams.get('origin')).toBe('JFK');
       expect(capturedUrl!.searchParams.get('destination')).toBe('LAX');
       expect(capturedUrl!.searchParams.get('departureDate')).toBe('2026-06-01');
-      expect(capturedUrl!.searchParams.get('adults')).toBe('1');
+      expect(capturedUrl!.searchParams.get('passengers')).toBe('1');
     });
 
     it('REQ-SEARCH-01-S02: returns cached result within TTL (300s)', async () => {

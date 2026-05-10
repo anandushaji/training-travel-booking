@@ -34,6 +34,7 @@ import { CancelReservationUseCase } from './application/use-cases/cancel-reserva
 // Presentation
 import { FlightsController } from './presentation/controllers/flights.controller';
 import { ReservationsController } from './presentation/controllers/reservations.controller';
+import { AirportsController } from './presentation/controllers/airports.controller';
 import { MetricsController } from './presentation/controllers/metrics.controller';
 
 @Module({
@@ -46,7 +47,7 @@ import { MetricsController } from './presentation/controllers/metrics.controller
       groupId: 'inventory-service-group',
     }),
   ],
-  controllers: [FlightsController, ReservationsController, MetricsController],
+  controllers: [FlightsController, ReservationsController, AirportsController, MetricsController],
   providers: [
     // Redis client
     {

@@ -1,5 +1,5 @@
-import { IsString, IsDateString, IsInt, IsOptional, IsIn, Min, Max, Length } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsDateString, IsInt, IsOptional, IsIn, IsBoolean, Min, Max, Length } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export class SearchFlightsRequestDto {
   @IsString()
@@ -26,4 +26,13 @@ export class SearchFlightsRequestDto {
   @IsOptional()
   @IsIn(['ECONOMY', 'PREMIUM_ECONOMY', 'BUSINESS', 'FIRST'])
   cabinClass?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  nonStop?: boolean;
 }

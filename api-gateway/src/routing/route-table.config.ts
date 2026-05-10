@@ -14,5 +14,8 @@ export function buildRouteTable(config: ConfigService): RouteEntry[] {
     { prefix: '/api/v1/payments', serviceUrl: config.get<string>('PAYMENT_SERVICE_URL') ?? '', serviceName: 'payment' },
     { prefix: '/api/v1/inventory', serviceUrl: config.get<string>('INVENTORY_SERVICE_URL') ?? '', serviceName: 'inventory' },
     { prefix: '/api/v1/expenses', serviceUrl: config.get<string>('EXPENSE_SERVICE_URL') ?? '', serviceName: 'expense' },
+    { prefix: '/api/v1/receipts', serviceUrl: config.get<string>('EXPENSE_SERVICE_URL') ?? '', serviceName: 'expense' },
+    { prefix: '/api/v1/categories', serviceUrl: config.get<string>('EXPENSE_SERVICE_URL') ?? '', serviceName: 'expense' },
+    { prefix: '/api/v1/admin/travelers', serviceUrl: config.get<string>('TRAVELER_SERVICE_URL') ?? '', serviceName: 'traveler' },
   ];
 }

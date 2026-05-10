@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Typography, Tabs, Tab, Link } from '@mui/material';
-import { selectUser, logout } from '../../auth/authSlice';
+import { Box, Typography, Tabs, Tab } from '@mui/material';
+import { selectUser, selectAccessToken, logout } from '../../auth/authSlice';
 import { useGetTravelerByIdQuery, useGetTravelerPreferencesQuery, useDeleteTravelerMutation } from '../travelerApi';
 import { ProfileForm } from '../components/ProfileForm';
 import { PreferencesForm } from '../components/PreferencesForm';
-import { Button, ConfirmDialog, Skeleton } from '../../../common/components';
+import { Button, ConfirmDialog, Skeleton, Alert } from '../../../common/components';
 import { ROUTES } from '../../../routes/routes.config';
 import type { AppDispatch } from '../../../app/store';
 
@@ -28,8 +28,37 @@ export function ProfilePage(): React.ReactElement {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector(selectUser);
+  const accessToken = useSelector(selectAccessToken);
 
   const travelerId = user?.id ?? '';
+
+  const [gdprExportError, setGdprExportError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleGdprExport = async () => {
+    setGdprExportError(null);
+    setIsExporting(true);
+    try {
+      const baseUrl =
+        (window as Window & { __ENV__?: { REACT_APP_API_URL?: string } }).__ENV__
+          ?.REACT_APP_API_URL ?? '';
+      const response = await fetch(`${baseUrl}/travelers/${travelerId}/export`, {
+        headers: { Authorization: `Bearer ${accessToken ?? ''}` },
+      });
+      if (!response.ok) throw new Error(`Export failed (${response.status})`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `my-data-${travelerId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setGdprExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { data: profile, isLoading: profileLoading } = useGetTravelerByIdQuery(travelerId, {
     skip: !travelerId,
@@ -87,14 +116,18 @@ export function ProfilePage(): React.ReactElement {
       {/* GDPR controls */}
       <Box sx={{ mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
         <Typography variant="subtitle2" gutterBottom>Data &amp; Privacy</Typography>
-        <Link
-          href={`/api/travelers/${travelerId}/export`}
-          download
+        {gdprExportError && (
+          <Alert severity="error" message={gdprExportError} sx={{ mb: 2 }} />
+        )}
+        <Button
+          variant="secondary"
+          onClick={() => { void handleGdprExport(); }}
+          disabled={isExporting}
           data-testid="gdpr-export-link"
-          sx={{ display: 'block', mb: 2 }}
+          sx={{ mb: 2, display: 'block' }}
         >
-          Download my data (GDPR export)
-        </Link>
+          {isExporting ? 'Exporting…' : 'Download my data (GDPR export)'}
+        </Button>
         <Button
           variant="danger"
           onClick={() => setDeleteDialogOpen(true)}

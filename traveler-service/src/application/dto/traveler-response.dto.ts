@@ -4,6 +4,7 @@ export class TravelerResponseDto {
   id: string;
   employeeId: string;
   name: string;
+  fullName: string;
   email: string;
   department: string;
   role: string;
@@ -15,6 +16,7 @@ export class TravelerResponseDto {
     this.id = traveler.id;
     this.employeeId = traveler.employeeId;
     this.name = traveler.name;
+    this.fullName = traveler.name;
     this.email = traveler.email;
     this.department = traveler.department;
     this.role = traveler.role;

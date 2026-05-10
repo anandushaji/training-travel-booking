@@ -39,6 +39,7 @@ export interface SearchFilters {
 export interface SearchState {
   filters: SearchFilters;
   selectedOffer: FlightOffer | null;
+  lastCabinClass: CabinClass;
 }
 
 export interface PolicyValidationResult {
