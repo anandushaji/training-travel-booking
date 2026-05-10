@@ -1,0 +1,237 @@
+# Corporate Travel Portal — Application Services
+#
+# PREREQUISITES (start these first):
+#   cd C:\Users\<you>\Documents\workspace\docker\db-radis-kafka
+#   docker compose up -d
+#
+# THEN start services (from pgt/ root):
+#   docker compose up -d
+#
+# OPTIONAL — observability:
+#   cd C:\Users\<you>\Documents\workspace\docker\observability
+#   docker compose -f docker-compose.observability.yml up -d
+#
+# All services share the "travel-portal" network defined by the infra compose.
+
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # booking-service   Port 3001
+  # ─────────────────────────────────────────────────────────────
+  booking-service:
+    build:
+      context: .
+      dockerfile: booking-service/Dockerfile
+    image: travel/booking-service:local
+    container_name: booking-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/travel_portal
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: booking-service
+      KAFKA_GROUP_ID: booking-service-group
+      POLICY_SERVICE_URL: http://policy-service:3002
+      INVENTORY_SERVICE_URL: http://inventory-service:3005
+      PAYMENT_SERVICE_URL: http://payment-service:3004
+      POLICY_CONNECT_TIMEOUT_MS: "2000"
+      POLICY_READ_TIMEOUT_MS: "5000"
+      INVENTORY_CONNECT_TIMEOUT_MS: "2000"
+      INVENTORY_READ_TIMEOUT_MS: "5000"
+      PAYMENT_CONNECT_TIMEOUT_MS: "2000"
+      PAYMENT_READ_TIMEOUT_MS: "5000"
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # policy-service   Port 3002
+  # ─────────────────────────────────────────────────────────────
+  policy-service:
+    build:
+      context: .
+      dockerfile: policy-service/Dockerfile
+    image: travel/policy-service:local
+    container_name: policy-service
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: "3002"
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/travel_portal
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: policy-service
+      KAFKA_GROUP_ID: policy-service-group
+      TRAVELER_SERVICE_URL: http://traveler-service:3003
+      TRAVELER_SERVICE_READ_TIMEOUT_MS: "5000"
+      TRAVELER_SERVICE_CONNECT_TIMEOUT_MS: "2000"
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # traveler-service   Port 3003
+  # ─────────────────────────────────────────────────────────────
+  traveler-service:
+    build:
+      context: .
+      dockerfile: traveler-service/Dockerfile
+    image: travel/traveler-service:local
+    container_name: traveler-service
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: production
+      PORT: "3003"
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/travel_portal
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:29092
+      # HR System — replace with real SOAP endpoint; mock with http://host.docker.internal:<port>
+      HR_SYSTEM_URL: http://host.docker.internal:8090
+      HR_SYSTEM_USERNAME: admin
+      HR_SYSTEM_PASSWORD: admin
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # payment-service   Port 3004
+  # ─────────────────────────────────────────────────────────────
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    image: travel/payment-service:local
+    container_name: payment-service
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: production
+      PORT: "3004"
+      # payment-service uses individual DB params (not DATABASE_URL)
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: travel_portal
+      DB_USER: admin
+      DB_PASSWORD: admin
+      # ⚠ Replace with your Stripe TEST keys — never use live keys locally
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_REPLACE_ME}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_REPLACE_ME}
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: payment-service
+      KAFKA_GROUP_ID: payment-service-group
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # inventory-service   Port 3005
+  # ─────────────────────────────────────────────────────────────
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    image: travel/inventory-service:local
+    container_name: inventory-service
+    ports:
+      - "3005:3005"
+    environment:
+      NODE_ENV: production
+      PORT: "3005"
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/travel_portal
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:29092
+      # ⚠ Replace with your Amadeus TEST credentials
+      AMADEUS_BASE_URL: https://test.api.amadeus.com
+      AMADEUS_CLIENT_ID: ${AMADEUS_CLIENT_ID:-REPLACE_ME}
+      AMADEUS_CLIENT_SECRET: ${AMADEUS_CLIENT_SECRET:-REPLACE_ME}
+      RESERVATION_HOLD_MINUTES: "15"
+      # AES-256 key for passport number encryption (64 hex chars = 32 bytes)
+      # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      PASSPORT_ENCRYPTION_KEY: ${PASSPORT_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # expense-service   Port 3006
+  # ─────────────────────────────────────────────────────────────
+  expense-service:
+    build:
+      context: .
+      dockerfile: expense-service/Dockerfile
+    image: travel/expense-service:local
+    container_name: expense-service
+    ports:
+      - "3006:3006"
+    environment:
+      NODE_ENV: production
+      PORT: "3006"
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/travel_portal
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: expense-service
+      KAFKA_GROUP_ID: expense-service-consumer
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # api-gateway   Port 4000
+  # ─────────────────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: travel/api-gateway:local
+    container_name: api-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: http://localhost:3000
+      BOOKING_SERVICE_URL: http://booking-service:3001
+      POLICY_SERVICE_URL: http://policy-service:3002
+      TRAVELER_SERVICE_URL: http://traveler-service:3003
+      PAYMENT_SERVICE_URL: http://payment-service:3004
+      INVENTORY_SERVICE_URL: http://inventory-service:3005
+      EXPENSE_SERVICE_URL: http://expense-service:3006
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+  # ─────────────────────────────────────────────────────────────
+  # frontend   Port 3000 (Nginx serving the React SPA)
+  # ─────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: travel/frontend:local
+    container_name: frontend
+    ports:
+      - "3000:80"
+    environment:
+      NODE_ENV: production
+      REACT_APP_API_URL: http://localhost:4000/api/v1
+      METRICS_ENDPOINT: http://api-gateway:4000/metrics
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    networks:
+      - travel-portal
+
+# ─────────────────────────────────────────────────────────────
+# Network — must already exist (created by db-radis-kafka compose)
+# Run the infra compose first: cd docker/db-radis-kafka && docker compose up -d
+# ─────────────────────────────────────────────────────────────
+networks:
+  travel-portal:
+    external: true
+    name: travel-portal

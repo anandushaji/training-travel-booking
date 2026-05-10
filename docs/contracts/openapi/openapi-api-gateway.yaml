@@ -1,0 +1,218 @@
+openapi: "3.0.3"
+info:
+  title: API Gateway — Auth Endpoints
+  version: "1.0.0"
+  description: |
+    Authentication endpoints served by the API Gateway. The gateway is the
+    sole JWT issuer (HS256, JWT_SECRET). Downstream microservices share
+    JWT_SECRET for validation only and never issue tokens.
+
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development (API Gateway)
+
+tags:
+  - name: auth
+    description: Authentication — login, token refresh, logout
+
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Exchange credentials for JWT token pair
+      description: |
+        Forwards credentials to Traveler Service (`POST /travelers/auth`),
+        receives userId + role, signs an HS256 access token (8 h TTL) and
+        a refresh token (7 d TTL), stores the refresh token hash in Redis,
+        and returns both tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successful login — returns JWT token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPairResponse"
+        "400":
+          description: Validation error (missing or malformed fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Traveler Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Rotate refresh token and issue new token pair
+      description: |
+        Validates the incoming refresh token against Redis
+        (`gateway:refresh-token:<sha256(token)>`). On success: deletes
+        the old Redis key, signs a new access + refresh token pair, stores
+        the new refresh token hash, and returns both tokens.
+        The old refresh token is immediately invalidated (rotation).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Token pair rotated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPairResponse"
+        "401":
+          description: Refresh token invalid, expired, or already rotated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Invalidate refresh token server-side
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "204":
+          description: Logout successful — refresh token invalidated in Redis
+        "401":
+          description: Access token missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: alice@corp.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "S3cure!Pass"
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          description: The refresh token previously issued by POST /auth/login or POST /auth/refresh
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    LogoutRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          description: The refresh token to invalidate
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    TokenPairResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+          description: HS256 JWT, TTL 8 hours (28800 s)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: HS256 JWT, TTL 7 days (604800 s)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expiresIn:
+          type: integer
+          description: Access token TTL in seconds
+          example: 28800
+        user:
+          $ref: "#/components/schemas/JwtUserPayload"
+
+    JwtUserPayload:
+      type: object
+      required: [id, email, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Traveler / user ID (sub claim)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          example: alice@corp.com
+        role:
+          type: string
+          enum: [EMPLOYEE, MANAGER, ADMIN]
+          example: EMPLOYEE
+
+    ErrorResponse:
+      type: object
+      required: [error, message, correlationId, timestamp]
+      properties:
+        error:
+          type: string
+          example: Unauthorized
+        message:
+          type: string
+          example: Invalid credentials
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+        correlationId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-05-04T16:00:00Z"

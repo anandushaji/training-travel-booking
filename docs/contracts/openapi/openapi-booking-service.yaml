@@ -1,0 +1,420 @@
+openapi: 3.0.3
+info:
+  title: Booking Service API
+  description: |
+    Booking Service handles trip booking orchestration using the Saga pattern.
+    Coordinates between Policy, Inventory, and Payment services.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@company.com
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+  - url: http://booking-service:3001
+    description: Docker internal
+  - url: https://api.travel.company.com/api/bookings
+    description: Production
+
+tags:
+  - name: Bookings
+    description: Booking management operations
+  - name: Health
+    description: Service health and readiness
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service health status
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /ready:
+    get:
+      summary: Readiness check
+      description: Returns service readiness (can accept traffic)
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+                  database:
+                    type: string
+                    example: connected
+
+  /bookings:
+    get:
+      summary: List bookings
+      description: Get all bookings for authenticated user
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, CANCELLED, FAILED]
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create booking
+      description: Create a new trip booking (initiates Saga)
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /bookings/{bookingId}:
+    get:
+      summary: Get booking by ID
+      description: Retrieve details of a specific booking
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update booking
+      description: Update booking details (limited fields)
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookingRequest'
+      responses:
+        '200':
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{bookingId}/cancel:
+    post:
+      summary: Cancel booking
+      description: Cancel an existing booking (triggers compensation Saga)
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Change of plans
+      responses:
+        '200':
+          description: Booking cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Booking cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        travelerId:
+          type: string
+          format: uuid
+        flightOfferId:
+          type: string
+          example: FLT-NYC-LAX-2024-001
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, CANCELLED, FAILED]
+          example: CONFIRMED
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+        totalAmount:
+          type: number
+          format: decimal
+          example: 450.00
+        currency:
+          type: string
+          example: USD
+        policyValidationId:
+          type: string
+          format: uuid
+        paymentId:
+          type: string
+          format: uuid
+        reservationId:
+          type: string
+          example: AMADEUS-PNR-ABC123
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        confirmedAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - travelerId
+        - flightOfferId
+        - itinerary
+      properties:
+        travelerId:
+          type: string
+          format: uuid
+        flightOfferId:
+          type: string
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        specialRequests:
+          type: string
+          example: Window seat preferred
+
+    Itinerary:
+      type: object
+      properties:
+        origin:
+          type: string
+          example: JFK
+        destination:
+          type: string
+          example: LAX
+        departureDate:
+          type: string
+          format: date
+          example: 2024-06-15
+        returnDate:
+          type: string
+          format: date
+          example: 2024-06-20
+        cabinClass:
+          type: string
+          enum: [ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST]
+          example: ECONOMY
+        passengers:
+          type: integer
+          minimum: 1
+          maximum: 9
+          example: 1
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 5
+        totalItems:
+          type: integer
+          example: 98
+        limit:
+          type: integer
+          example: 20
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Validation failed
+        message:
+          type: string
+          example: Invalid booking ID format
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Validation failed
+            details:
+              - field: travelerId
+                message: travelerId is required
+              - field: departureDate
+                message: departureDate must be in the future

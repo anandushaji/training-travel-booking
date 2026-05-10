@@ -1,0 +1,1 @@
+{"version":3,"file":"conflict.exception.js","sourceRoot":"","sources":["../../src/exceptions/conflict.exception.ts"],"names":[],"mappings":";;;AAAA,yDAAqD;AAErD,MAAa,iBAAkB,SAAQ,kCAAe;IACpD,YAAY,OAAe,EAAE,IAAY,EAAE,OAAiC;QAC1E,KAAK,CAAC,OAAO,EAAE,IAAI,EAAE,GAAG,EAAE,OAAO,CAAC,CAAC;QACnC,MAAM,CAAC,cAAc,CAAC,IAAI,EAAE,GAAG,CAAC,MAAM,CAAC,SAAS,CAAC,CAAC;IACpD,CAAC;CACF;AALD,8CAKC"}

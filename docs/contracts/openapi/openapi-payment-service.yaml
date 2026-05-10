@@ -1,0 +1,708 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  description: |
+    Payment processing service integrated with Stripe.
+    Handles payment methods, payments, refunds, and PCI-DSS compliant card processing.
+    All endpoints (except POST /webhooks/stripe) require a JWT Bearer token.
+  version: 1.1.0
+  contact:
+    name: API Support
+    email: api-support@company.com
+
+servers:
+  - url: http://localhost:3004/api/v1
+    description: Local development
+  - url: http://payment-service:3004/api/v1
+    description: Docker internal
+  - url: https://api.travel.company.com/api/payments/v1
+    description: Production
+
+tags:
+  - name: Payment Methods
+    description: Manage payment methods
+  - name: Payments
+    description: Process payments and refunds
+  - name: Webhooks
+    description: Stripe webhook receiver
+  - name: Health
+    description: Service health checks
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /ready:
+    get:
+      summary: Readiness check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  database:
+                    type: string
+                    example: connected
+                  stripe:
+                    type: string
+                    example: reachable
+
+  /payment-methods:
+    get:
+      summary: List payment methods
+      description: Get all active payment methods for the authenticated traveler (filtered by travelerId from JWT).
+      tags: [Payment Methods]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of payment methods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethodResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Add payment method
+      description: |
+        Attach a Stripe-tokenized payment method to the authenticated traveler.
+        The stripePaymentMethodId is stored but never returned in responses (PCI-DSS).
+      tags: [Payment Methods]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPaymentMethodRequest'
+      responses:
+        '201':
+          description: Payment method added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Payment method already attached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payment-methods/{paymentMethodId}:
+    delete:
+      summary: Remove payment method
+      description: |
+        Soft-deletes the payment method (isActive = false) and detaches it from Stripe.
+        Ownership check: travelerId from JWT must match the payment method owner.
+      tags: [Payment Methods]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentMethodId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Payment method removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments:
+    get:
+      summary: List payments
+      description: Get payment history for the authenticated traveler (filtered by travelerId from JWT).
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, AUTHORIZED, CAPTURED, FAILED, REFUNDED, PARTIALLY_REFUNDED, CANCELLED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Authorize payment
+      description: |
+        Authorize a payment for a booking. Creates a Stripe PaymentIntent with capture_method=manual.
+        Idempotent: repeat calls with the same Idempotency-Key return the existing payment (HTTP 200).
+        On card decline, returns HTTP 402.
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: UUID v4 idempotency key; repeat requests with the same key return the cached response.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizePaymentRequest'
+      responses:
+        '201':
+          description: Payment authorized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizePaymentResponse'
+        '200':
+          description: Duplicate idempotency key — existing payment returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizePaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment failed (card declined or Stripe error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentFailedError'
+        '503':
+          description: Stripe circuit breaker open — service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/{paymentId}:
+    get:
+      summary: Get payment details
+      description: |
+        Returns payment details for the given paymentId.
+        Ownership check: travelerId from JWT must match the payment owner.
+        Note: stripePaymentIntentId and stripePaymentMethodId are NOT returned (PCI-DSS / security).
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /payments/{paymentId}/capture:
+    post:
+      summary: Capture authorized payment
+      description: |
+        Capture a previously authorized payment. Full capture only (v1).
+        Ownership check: travelerId from JWT must match the payment owner.
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment captured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapturePaymentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Payment cannot be captured (invalid state transition)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Stripe circuit breaker open
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/{paymentId}/refund:
+    post:
+      summary: Refund payment
+      description: |
+        Issue a full or partial refund for a CAPTURED payment.
+        Ownership check: travelerId from JWT must match the payment owner.
+        Reason must be one of the Stripe-accepted values.
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundPaymentRequest'
+      responses:
+        '200':
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundPaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Payment cannot be refunded (invalid state transition)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Stripe circuit breaker open
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /webhooks/stripe:
+    post:
+      summary: Stripe webhook receiver
+      description: |
+        Receives Stripe webhook events. Validates the Stripe-Signature header using the
+        webhook secret. No JWT authentication required — Stripe signature verification
+        is the security mechanism.
+        Handled events:
+          - payment_intent.succeeded → CAPTURED
+          - payment_intent.payment_failed → FAILED
+          - payment_intent.canceled → CANCELLED
+      tags: [Webhooks]
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          description: Stripe webhook signature for payload verification
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw Stripe event payload
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid signature or malformed payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AddPaymentMethodRequest:
+      type: object
+      required:
+        - stripePaymentMethodId
+        - cardBrand
+        - last4
+        - expiryMonth
+        - expiryYear
+      properties:
+        stripePaymentMethodId:
+          type: string
+          description: Stripe payment method ID (pm_xxx) obtained from Stripe.js — stored but never returned
+          example: pm_1234567890
+        cardBrand:
+          type: string
+          enum: [visa, mastercard, amex, discover, unknown]
+          example: visa
+        last4:
+          type: string
+          pattern: '^[0-9]{4}$'
+          example: "4242"
+        expiryMonth:
+          type: integer
+          minimum: 1
+          maximum: 12
+          example: 12
+        expiryYear:
+          type: integer
+          minimum: 2024
+          example: 2027
+
+    PaymentMethodResponse:
+      type: object
+      properties:
+        paymentMethodId:
+          type: string
+          format: uuid
+        travelerId:
+          type: string
+          format: uuid
+        cardBrand:
+          type: string
+          enum: [visa, mastercard, amex, discover, unknown]
+          example: visa
+        last4:
+          type: string
+          example: "4242"
+        expiryMonth:
+          type: integer
+          example: 12
+        expiryYear:
+          type: integer
+          example: 2027
+        isDefault:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthorizePaymentRequest:
+      type: object
+      required:
+        - paymentMethodId
+        - amount
+        - currency
+        - bookingId
+      properties:
+        paymentMethodId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          example: 350.00
+          minimum: 0.01
+        currency:
+          type: string
+          example: USD
+          pattern: '^[A-Z]{3}$'
+        bookingId:
+          type: string
+          format: uuid
+        description:
+          type: string
+          example: "Flight SFO-JFK - Jan 2027"
+
+    AuthorizePaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, AUTHORIZED]
+          example: AUTHORIZED
+        amount:
+          type: number
+          example: 350.00
+        currency:
+          type: string
+          example: USD
+        bookingId:
+          type: string
+          format: uuid
+        stripePaymentIntentId:
+          type: string
+          description: Returned only on authorize response; not exposed on GET endpoints
+          example: pi_1234567890
+        createdAt:
+          type: string
+          format: date-time
+
+    PaymentResponse:
+      type: object
+      description: |
+        Payment resource returned by GET /payments and GET /payments/:id.
+        stripePaymentIntentId and stripePaymentMethodId are intentionally omitted (PCI-DSS / security).
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        bookingId:
+          type: string
+          format: uuid
+        travelerId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          example: 350.00
+        currency:
+          type: string
+          example: USD
+        status:
+          type: string
+          enum: [PENDING, AUTHORIZED, CAPTURED, FAILED, REFUNDED, PARTIALLY_REFUNDED, CANCELLED]
+          example: CAPTURED
+        paymentMethodId:
+          type: string
+          format: uuid
+        failureCode:
+          type: string
+          example: card_declined
+        failureMessage:
+          type: string
+          example: Your card was declined
+        refundedAmount:
+          type: number
+          example: 350.00
+        createdAt:
+          type: string
+          format: date-time
+        authorizedAt:
+          type: string
+          format: date-time
+        capturedAt:
+          type: string
+          format: date-time
+        failedAt:
+          type: string
+          format: date-time
+        refundedAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+
+    CapturePaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CAPTURED]
+          example: CAPTURED
+        capturedAmount:
+          type: number
+          example: 350.00
+        currency:
+          type: string
+          example: USD
+
+    RefundPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          description: Amount to refund; full refund if omitted
+          example: 350.00
+          minimum: 0.01
+        reason:
+          type: string
+          description: Must be one of the Stripe-accepted refund reason values
+          enum: [duplicate, fraudulent, requested_by_customer]
+          example: requested_by_customer
+
+    RefundPaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [REFUNDED, PARTIALLY_REFUNDED]
+          example: REFUNDED
+        refundedAmount:
+          type: number
+          example: 350.00
+        currency:
+          type: string
+          example: USD
+
+    PaymentFailedError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: payment_failed
+        code:
+          type: string
+          example: card_declined
+        message:
+          type: string
+          example: Your card was declined
+        declineCode:
+          type: string
+          example: insufficient_funds
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+        limit:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+  responses:
+    BadRequest:
+      description: Bad request — validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized — missing or invalid JWT
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden — travelerId does not own this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

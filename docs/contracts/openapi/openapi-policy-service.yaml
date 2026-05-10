@@ -1,0 +1,606 @@
+openapi: 3.0.3
+info:
+  title: Policy Service API
+  description: |
+    Travel policy validation and budget management service.
+    Validates bookings against corporate travel policies and manages department budgets.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@company.com
+
+servers:
+  - url: http://localhost:3002
+    description: Local development
+  - url: http://policy-service:3002
+    description: Docker internal
+  - url: https://api.travel.company.com/api/policies
+    description: Production
+
+tags:
+  - name: Policies
+    description: Travel policy management
+  - name: Budgets
+    description: Department budget tracking
+  - name: Health
+    description: Service health checks
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+
+  /ready:
+    get:
+      summary: Readiness check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessCheck'
+
+  /policies:
+    get:
+      summary: List all policies
+      description: Get all travel policies, optionally filtered by department
+      tags: [Policies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: query
+          description: Filter by department
+          schema:
+            type: string
+        - name: active
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Policy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create new policy
+      description: Create a new travel policy (admin only)
+      tags: [Policies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyRequest'
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /policies/{policyId}:
+    get:
+      summary: Get policy by ID
+      tags: [Policies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Policy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update policy
+      tags: [Policies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyRequest'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete policy
+      tags: [Policies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Policy deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /policies/validate:
+    post:
+      summary: Validate booking against policy
+      description: Check if a booking request complies with travel policies
+      tags: [Policies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyValidationRequest'
+            example:
+              travelerId: "550e8400-e29b-41d4-a716-446655440000"
+              cabinClass: "BUSINESS"
+              amount: 1500.00
+              origin: "JFK"
+              destination: "LAX"
+              advanceBookingDays: 3
+      responses:
+        '200':
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /budgets:
+    get:
+      summary: List all budgets
+      description: Get department budgets (admin/manager only)
+      tags: [Budgets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fiscalYear
+          in: query
+          schema:
+            type: integer
+            example: 2024
+      responses:
+        '200':
+          description: List of budgets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Budget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create budget
+      tags: [Budgets]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBudgetRequest'
+      responses:
+        '201':
+          description: Budget created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Budget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /budgets/{department}:
+    get:
+      summary: Get department budget
+      tags: [Budgets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fiscalYear
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Budget details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Budget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /budgets/{department}/remaining:
+    get:
+      summary: Get remaining budget
+      description: Get available budget for a department
+      tags: [Budgets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Remaining budget
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  department:
+                    type: string
+                    example: Engineering
+                  fiscalYear:
+                    type: integer
+                    example: 2024
+                  totalBudget:
+                    type: number
+                    example: 500000.00
+                  spent:
+                    type: number
+                    example: 325000.00
+                  remaining:
+                    type: number
+                    example: 175000.00
+                  percentageUsed:
+                    type: number
+                    example: 65.0
+                  currency:
+                    type: string
+                    example: USD
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+
+    ReadinessCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ready
+        database:
+          type: string
+          example: connected
+
+    Policy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Standard Travel Policy
+        description:
+          type: string
+          example: Default policy for all employees
+        department:
+          type: string
+          example: Engineering
+        rules:
+          $ref: '#/components/schemas/PolicyRules'
+        active:
+          type: boolean
+          example: true
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PolicyRules:
+      type: object
+      properties:
+        maxFlightCost:
+          type: number
+          example: 1000.00
+          description: Maximum allowed flight cost
+        allowedCabinClasses:
+          type: array
+          items:
+            type: string
+            enum: [ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST]
+          example: [ECONOMY, PREMIUM_ECONOMY]
+        advanceBookingDays:
+          type: integer
+          example: 7
+          description: Minimum days before travel to book
+        requiresApproval:
+          type: boolean
+          example: false
+          description: Whether manager approval is required
+        approvalThreshold:
+          type: number
+          example: 2000.00
+          description: Amount above which approval is required
+        allowInternational:
+          type: boolean
+          example: true
+
+    CreatePolicyRequest:
+      type: object
+      required:
+        - name
+        - department
+        - rules
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        department:
+          type: string
+        rules:
+          $ref: '#/components/schemas/PolicyRules'
+
+    UpdatePolicyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        rules:
+          $ref: '#/components/schemas/PolicyRules'
+        active:
+          type: boolean
+
+    PolicyValidationRequest:
+      type: object
+      required:
+        - travelerId
+        - amount
+      properties:
+        travelerId:
+          type: string
+          format: uuid
+        cabinClass:
+          type: string
+          enum: [ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST]
+        amount:
+          type: number
+          example: 1500.00
+        origin:
+          type: string
+          example: JFK
+        destination:
+          type: string
+          example: LAX
+        advanceBookingDays:
+          type: integer
+          example: 10
+
+    PolicyValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          example: false
+        policyId:
+          type: string
+          format: uuid
+        violations:
+          type: array
+          items:
+            type: object
+            properties:
+              rule:
+                type: string
+                example: cabinClass
+              message:
+                type: string
+                example: Business class not allowed for this employee level
+              severity:
+                type: string
+                enum: [ERROR, WARNING]
+                example: ERROR
+        requiresApproval:
+          type: boolean
+          example: false
+        validatedAt:
+          type: string
+          format: date-time
+
+    Budget:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+          example: Engineering
+        fiscalYear:
+          type: integer
+          example: 2024
+        totalBudget:
+          type: number
+          example: 500000.00
+        spent:
+          type: number
+          example: 325000.00
+        remaining:
+          type: number
+          example: 175000.00
+        currency:
+          type: string
+          example: USD
+        quarter:
+          type: object
+          properties:
+            Q1:
+              type: number
+            Q2:
+              type: number
+            Q3:
+              type: number
+            Q4:
+              type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateBudgetRequest:
+      type: object
+      required:
+        - department
+        - fiscalYear
+        - totalBudget
+      properties:
+        department:
+          type: string
+        fiscalYear:
+          type: integer
+        totalBudget:
+          type: number
+        currency:
+          type: string
+          default: USD
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

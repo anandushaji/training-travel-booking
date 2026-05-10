@@ -1,0 +1,652 @@
+openapi: 3.0.3
+info:
+  title: Traveler Service API
+  description: |
+    Traveler profile management and HR system integration.
+    Manages employee profiles, preferences, and synchronization with HR systems.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@company.com
+
+servers:
+  - url: http://localhost:3003
+    description: Local development
+  - url: http://traveler-service:3003
+    description: Docker internal
+  - url: https://api.travel.company.com/api/travelers
+    description: Production
+
+tags:
+  - name: Travelers
+    description: Traveler profile management
+  - name: Preferences
+    description: Travel preferences
+  - name: Admin
+    description: Administrative operations
+  - name: Health
+    description: Service health checks
+  - name: Auth (Internal)
+    description: Internal authentication endpoints (called by API Gateway only)
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+
+  /ready:
+    get:
+      summary: Readiness check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  database:
+                    type: string
+
+  /travelers/auth:
+    post:
+      summary: Validate traveler credentials (internal — called by API Gateway only)
+      description: >
+        Internal endpoint called by the API Gateway during login. Validates the
+        traveler's email and password and returns identity claims used for JWT issuance.
+        This endpoint MUST NOT be exposed through the public API Gateway route table.
+      operationId: authenticateTraveler
+      tags:
+        - Auth (Internal)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: alice@corp.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  maxLength: 128
+                  example: "s3cret!"
+      responses:
+        '200':
+          description: Credentials valid — returns identity claims for JWT issuance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+                  role:
+                    type: string
+                    enum: [EMPLOYEE, MANAGER, ADMIN]
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error (missing/malformed fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /travelers:
+    get:
+      summary: List all travelers
+      description: Get all travelers with optional filtering
+      tags: [Travelers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of travelers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  travelers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Traveler'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create traveler
+      description: Create new traveler profile (admin only)
+      tags: [Travelers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTravelerRequest'
+      responses:
+        '201':
+          description: Traveler created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Traveler'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /travelers/{travelerId}:
+    get:
+      summary: Get traveler by ID
+      tags: [Travelers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: travelerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Traveler details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Traveler'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Update traveler profile
+      tags: [Travelers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: travelerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTravelerRequest'
+      responses:
+        '200':
+          description: Traveler updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Traveler'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /travelers/{travelerId}/preferences:
+    get:
+      summary: Get traveler preferences
+      tags: [Preferences]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: travelerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Traveler preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TravelerPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update traveler preferences
+      tags: [Preferences]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: travelerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TravelerPreferences'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TravelerPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /travelers/search:
+    get:
+      summary: Search travelers
+      tags: [Travelers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query (name, email, employee ID)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Traveler'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sync/hr:
+    post:
+      summary: Trigger HR system sync
+      description: Synchronize traveler data with HR system (admin only)
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullSync:
+                  type: boolean
+                  default: false
+                  description: If true, sync all travelers; otherwise incremental
+      responses:
+        '202':
+          description: Sync job initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    example: STARTED
+                  startedAt:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /sync/hr/status/{jobId}:
+    get:
+      summary: Get HR sync job status
+      tags: [Admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [STARTED, IN_PROGRESS, COMPLETED, FAILED]
+                  progress:
+                    type: object
+                    properties:
+                      processed:
+                        type: integer
+                      total:
+                        type: integer
+                      errors:
+                        type: integer
+                  startedAt:
+                    type: string
+                    format: date-time
+                  completedAt:
+                    type: string
+                    format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Traveler:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          example: EMP-12345
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        fullName:
+          type: string
+          example: John Doe
+        department:
+          type: string
+          example: Engineering
+        jobTitle:
+          type: string
+          example: Senior Software Engineer
+        level:
+          type: string
+          example: L5
+        manager:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+        costCenter:
+          type: string
+          example: CC-ENG-001
+        approvalRequired:
+          type: boolean
+          example: false
+        active:
+          type: boolean
+          example: true
+        hireDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastSyncedAt:
+          type: string
+          format: date-time
+
+    CreateTravelerRequest:
+      type: object
+      required:
+        - employeeId
+        - email
+        - firstName
+        - lastName
+        - department
+      properties:
+        employeeId:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        department:
+          type: string
+        jobTitle:
+          type: string
+        level:
+          type: string
+        managerId:
+          type: string
+          format: uuid
+        costCenter:
+          type: string
+        hireDate:
+          type: string
+          format: date
+
+    UpdateTravelerRequest:
+      type: object
+      properties:
+        department:
+          type: string
+        jobTitle:
+          type: string
+        level:
+          type: string
+        managerId:
+          type: string
+          format: uuid
+        costCenter:
+          type: string
+        approvalRequired:
+          type: boolean
+        active:
+          type: boolean
+
+    TravelerPreferences:
+      type: object
+      properties:
+        seatPreference:
+          type: string
+          enum: [WINDOW, AISLE, NO_PREFERENCE]
+          example: WINDOW
+        mealPreference:
+          type: string
+          enum: [STANDARD, VEGETARIAN, VEGAN, KOSHER, HALAL, GLUTEN_FREE]
+          example: VEGETARIAN
+        specialRequests:
+          type: string
+          example: Extra legroom preferred
+        frequentFlyerNumbers:
+          type: array
+          items:
+            type: object
+            properties:
+              airline:
+                type: string
+                example: United Airlines
+              number:
+                type: string
+                example: UA1234567
+        loyaltyPrograms:
+          type: array
+          items:
+            type: object
+            properties:
+              program:
+                type: string
+              number:
+                type: string
+        notifications:
+          type: object
+          properties:
+            email:
+              type: boolean
+              default: true
+            sms:
+              type: boolean
+              default: false
+            emailAddress:
+              type: string
+              format: email
+            phoneNumber:
+              type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+        limit:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

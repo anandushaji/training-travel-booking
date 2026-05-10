@@ -1,0 +1,651 @@
+openapi: 3.0.3
+info:
+  title: Expense Service API
+  description: |
+    Expense management service for receipt generation and expense tracking.
+    Handles automated receipt generation and expense reporting.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@company.com
+
+servers:
+  - url: http://localhost:3006
+    description: Local development
+  - url: http://expense-service:3006
+    description: Docker internal
+  - url: https://api.travel.company.com/api/expenses
+    description: Production
+
+tags:
+  - name: Receipts
+    description: Receipt management
+  - name: Expenses
+    description: Expense reporting and tracking
+  - name: Health
+    description: Service health checks
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+
+  /ready:
+    get:
+      summary: Readiness check
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  database:
+                    type: string
+
+  /receipts:
+    get:
+      summary: List receipts
+      description: Get all receipts for authenticated user
+      tags: [Receipts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: query
+          description: Filter by booking ID
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of receipts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receipts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Receipt'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /receipts/{receiptId}:
+    get:
+      summary: Get receipt details
+      tags: [Receipts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receipt details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /receipts/{receiptId}/download:
+    get:
+      summary: Download receipt PDF
+      description: Download PDF version of receipt
+      tags: [Receipts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: PDF receipt
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename="receipt-RCP-2024-001.pdf"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /receipts/{receiptId}/regenerate:
+    post:
+      summary: Regenerate receipt
+      description: Regenerate PDF receipt (e.g., after booking changes)
+      tags: [Receipts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receipt regenerated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /expenses:
+    get:
+      summary: Get expense report
+      description: Generate expense report for specified period
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2024-12-31"
+        - name: department
+          in: query
+          description: Filter by department (admin/manager only)
+          schema:
+            type: string
+        - name: travelerId
+          in: query
+          description: Filter by traveler (admin/manager only)
+          schema:
+            type: string
+            format: uuid
+        - name: groupBy
+          in: query
+          description: Group results by field
+          schema:
+            type: string
+            enum: [department, traveler, month, category]
+            default: month
+      responses:
+        '200':
+          description: Expense report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /expenses/export:
+    get:
+      summary: Export expenses to CSV
+      description: Download expense report as CSV file
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: attachment; filename="expenses-2024.csv"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /expenses/summary:
+    get:
+      summary: Get expense summary
+      description: Get high-level expense summary and statistics
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: fiscalYear
+          in: query
+          schema:
+            type: integer
+            example: 2024
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expense summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /categories:
+    get:
+      summary: List expense categories
+      description: Get all available expense categories
+      tags: [Expenses]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                      example: Flight
+                    description:
+                      type: string
+                    active:
+                      type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Receipt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        receiptNumber:
+          type: string
+          example: RCP-2024-001
+        bookingId:
+          type: string
+          format: uuid
+        traveler:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: John Doe
+            email:
+              type: string
+            employeeId:
+              type: string
+        booking:
+          type: object
+          properties:
+            id:
+              type: string
+            itinerary:
+              type: object
+              properties:
+                origin:
+                  type: string
+                destination:
+                  type: string
+                departureDate:
+                  type: string
+                  format: date
+                returnDate:
+                  type: string
+                  format: date
+        amount:
+          type: number
+          example: 450.00
+        currency:
+          type: string
+          example: USD
+        breakdown:
+          type: object
+          properties:
+            basefare:
+              type: number
+            taxes:
+              type: number
+            fees:
+              type: number
+        pdfUrl:
+          type: string
+          format: uri
+          example: https://s3.../receipts/RCP-2024-001.pdf
+        generatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ExpenseReport:
+      type: object
+      properties:
+        reportId:
+          type: string
+          format: uuid
+        period:
+          type: object
+          properties:
+            startDate:
+              type: string
+              format: date
+            endDate:
+              type: string
+              format: date
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+        summary:
+          type: object
+          properties:
+            totalAmount:
+              type: number
+              example: 25000.00
+            totalCount:
+              type: integer
+              example: 45
+            averageAmount:
+              type: number
+              example: 555.56
+            byCategory:
+              type: object
+              additionalProperties:
+                type: number
+              example:
+                Flight: 20000.00
+                Hotel: 5000.00
+            byDepartment:
+              type: object
+              additionalProperties:
+                type: number
+            byMonth:
+              type: array
+              items:
+                type: object
+                properties:
+                  month:
+                    type: string
+                    example: "2024-01"
+                  amount:
+                    type: number
+                  count:
+                    type: integer
+        generatedAt:
+          type: string
+          format: date-time
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookingId:
+          type: string
+          format: uuid
+        receiptId:
+          type: string
+          format: uuid
+        traveler:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            department:
+              type: string
+            employeeId:
+              type: string
+        amount:
+          type: number
+          example: 450.00
+        currency:
+          type: string
+          example: USD
+        date:
+          type: string
+          format: date
+        category:
+          type: string
+          example: Flight
+        description:
+          type: string
+          example: NYC to LAX round trip
+        trip:
+          type: object
+          properties:
+            origin:
+              type: string
+            destination:
+              type: string
+            purpose:
+              type: string
+        approvalStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        approvedBy:
+          type: string
+          format: uuid
+        approvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ExpenseSummary:
+      type: object
+      properties:
+        fiscalYear:
+          type: integer
+          example: 2024
+        department:
+          type: string
+        totalExpenses:
+          type: number
+          example: 500000.00
+        totalCount:
+          type: integer
+          example: 856
+        byQuarter:
+          type: object
+          properties:
+            Q1:
+              type: object
+              properties:
+                amount:
+                  type: number
+                count:
+                  type: integer
+            Q2:
+              type: object
+              properties:
+                amount:
+                  type: number
+                count:
+                  type: integer
+            Q3:
+              type: object
+              properties:
+                amount:
+                  type: number
+                count:
+                  type: integer
+            Q4:
+              type: object
+              properties:
+                amount:
+                  type: number
+                count:
+                  type: integer
+        topSpenders:
+          type: array
+          items:
+            type: object
+            properties:
+              travelerId:
+                type: string
+              name:
+                type: string
+              amount:
+                type: number
+              tripCount:
+                type: integer
+        trends:
+          type: object
+          properties:
+            monthOverMonth:
+              type: number
+              description: Percentage change from previous month
+            yearOverYear:
+              type: number
+              description: Percentage change from previous year
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+        limit:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

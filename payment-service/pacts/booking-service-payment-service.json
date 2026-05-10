@@ -1,0 +1,529 @@
+{
+  "consumer": {
+    "name": "booking-service"
+  },
+  "messages": [
+    {
+      "contents": {
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "causationId": "cause-00000000-0000-4000-8000-000000000001",
+        "correlationId": "corr-00000000-0000-4000-8000-000000000001",
+        "data": {
+          "amount": 350,
+          "bookingId": "00000000-0000-4000-8000-000000000002",
+          "currency": "USD",
+          "paymentId": "00000000-0000-4000-8000-000000000001",
+          "stripePaymentIntentId": "pi_test_authorized",
+          "travelerId": "00000000-0000-4000-8000-000000000003"
+        },
+        "eventId": "00000000-0000-4000-8000-000000000010",
+        "eventType": "PaymentAuthorized",
+        "occurredOn": "2026-05-03T12:00:00.000Z"
+      },
+      "description": "a PaymentAuthorized event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.amount": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.bookingId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.currency": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.stripePaymentIntentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.travelerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventType": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "a payment authorization has succeeded"
+        }
+      ]
+    },
+    {
+      "contents": {
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "causationId": "cause-00000000-0000-4000-8000-000000000001",
+        "correlationId": "corr-00000000-0000-4000-8000-000000000001",
+        "data": {
+          "bookingId": "00000000-0000-4000-8000-000000000002",
+          "capturedAmount": 350,
+          "currency": "USD",
+          "paymentId": "00000000-0000-4000-8000-000000000001",
+          "travelerId": "00000000-0000-4000-8000-000000000003"
+        },
+        "eventId": "00000000-0000-4000-8000-000000000010",
+        "eventType": "PaymentCaptured",
+        "occurredOn": "2026-05-03T12:00:00.000Z"
+      },
+      "description": "a PaymentCaptured event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.bookingId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.capturedAmount": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.currency": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.travelerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventType": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "an authorized payment has been captured"
+        }
+      ]
+    },
+    {
+      "contents": {
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "causationId": "cause-00000000-0000-4000-8000-000000000001",
+        "correlationId": "corr-00000000-0000-4000-8000-000000000001",
+        "data": {
+          "amount": 350,
+          "bookingId": "00000000-0000-4000-8000-000000000002",
+          "currency": "USD",
+          "failureReason": "card_declined",
+          "paymentId": "00000000-0000-4000-8000-000000000001",
+          "travelerId": "00000000-0000-4000-8000-000000000003"
+        },
+        "eventId": "00000000-0000-4000-8000-000000000010",
+        "eventType": "PaymentFailed",
+        "occurredOn": "2026-05-03T12:00:00.000Z"
+      },
+      "description": "a PaymentFailed event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.amount": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.bookingId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.currency": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.failureReason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.travelerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventType": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "a payment authorization has been declined by Stripe"
+        }
+      ]
+    },
+    {
+      "contents": {
+        "aggregateId": "00000000-0000-4000-8000-000000000001",
+        "causationId": "cause-00000000-0000-4000-8000-000000000001",
+        "correlationId": "corr-00000000-0000-4000-8000-000000000001",
+        "data": {
+          "bookingId": "00000000-0000-4000-8000-000000000002",
+          "currency": "USD",
+          "paymentId": "00000000-0000-4000-8000-000000000001",
+          "reason": "requested_by_customer",
+          "refundedAmount": 350,
+          "travelerId": "00000000-0000-4000-8000-000000000003"
+        },
+        "eventId": "00000000-0000-4000-8000-000000000010",
+        "eventType": "PaymentRefunded",
+        "occurredOn": "2026-05-03T12:00:00.000Z"
+      },
+      "description": "a PaymentRefunded event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.bookingId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.currency": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.paymentId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.refundedAmount": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.travelerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.eventType": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "a captured payment has been refunded"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "13.2.0"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "payment-service"
+  }
+}

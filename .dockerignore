@@ -1,0 +1,51 @@
+# .dockerignore — build context: pgt/ (monorepo root)
+# Keeps the Docker build context lean by excluding large/irrelevant directories.
+# packages/shared/dist IS included (pre-built, used at runtime).
+
+# Git
+.git
+.github
+
+# Dependencies — reinstalled fresh inside Docker
+node_modules
+packages/shared/node_modules
+booking-service/node_modules
+policy-service/node_modules
+traveler-service/node_modules
+payment-service/node_modules
+inventory-service/node_modules
+expense-service/node_modules
+api-gateway/node_modules
+
+# Compiled output — rebuilt inside Docker
+booking-service/dist
+policy-service/dist
+traveler-service/dist
+payment-service/dist
+inventory-service/dist
+expense-service/dist
+api-gateway/dist
+
+# Test and coverage artifacts
+**/coverage
+**/pacts
+**/*.spec.ts
+**/*.test.ts
+**/*.spec.js
+jest.config.*
+*.coverage.config.*
+
+# OpenSpec / docs (not needed at runtime)
+openspec
+docs
+
+# Editor / OS
+.vscode
+.idea
+**/.DS_Store
+**/Thumbs.db
+
+# Secrets — never bake into image
+**/.env
+**/.env.local
+**/.env.*.local

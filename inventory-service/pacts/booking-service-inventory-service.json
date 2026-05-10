@@ -1,0 +1,435 @@
+{
+  "consumer": {
+    "name": "booking-service"
+  },
+  "messages": [
+    {
+      "contents": {
+        "aggregateId": "b4d5c6e7-f8a9-4b0c-1d2e-3f4a5b6c7d8e",
+        "causationId": "caus-booking-1",
+        "correlationId": "corr-booking-1",
+        "data": {
+          "arrivalAt": "2026-07-01T13:00:00.000Z",
+          "cabinClass": "ECONOMY",
+          "carrier": "BA",
+          "departureAt": "2026-07-01T10:00:00.000Z",
+          "destination": "JFK",
+          "expiresAt": "2026-07-01T10:15:00.000Z",
+          "flightNumber": "BA117",
+          "offerId": "offer-123",
+          "origin": "LHR",
+          "passengerId": "d6f7e8a9-b0c1-4d2e-3f4a-5b6c7d8e9f0a",
+          "reservationId": "c5e6d7f8-a9b0-4c1d-2e3f-4a5b6c7d8e9f"
+        },
+        "eventId": "a3c2b1d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        "eventType": "FlightReserved",
+        "occurredOn": "2026-07-01T10:00:00.000Z"
+      },
+      "description": "a FlightReserved event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.arrivalAt": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          },
+          "$.data.cabinClass": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.carrier": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.departureAt": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          },
+          "$.data.destination": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.expiresAt": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          },
+          "$.data.flightNumber": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.offerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.origin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.passengerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.data.reservationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "a flight reservation exists"
+        }
+      ]
+    },
+    {
+      "contents": {
+        "aggregateId": "b4d5c6e7-f8a9-4b0c-1d2e-3f4a5b6c7d8e",
+        "causationId": "caus-booking-1",
+        "correlationId": "corr-booking-1",
+        "data": {
+          "cancelledAt": "2026-07-01T10:05:00.000Z",
+          "passengerId": "d6f7e8a9-b0c1-4d2e-3f4a-5b6c7d8e9f0a",
+          "reason": "USER_REQUESTED",
+          "reservationId": "c5e6d7f8-a9b0-4c1d-2e3f-4a5b6c7d8e9f"
+        },
+        "eventId": "a3c2b1d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        "eventType": "FlightReservationCancelled",
+        "occurredOn": "2026-07-01T10:00:00.000Z"
+      },
+      "description": "a FlightReservationCancelled event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.cancelledAt": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          },
+          "$.data.passengerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.data.reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.reservationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "a confirmed flight reservation exists"
+        }
+      ]
+    },
+    {
+      "contents": {
+        "aggregateId": "b4d5c6e7-f8a9-4b0c-1d2e-3f4a5b6c7d8e",
+        "causationId": "caus-booking-1",
+        "correlationId": "corr-booking-1",
+        "data": {
+          "expiredAt": "2026-07-01T10:20:00.000Z",
+          "offerId": "offer-123",
+          "passengerId": "d6f7e8a9-b0c1-4d2e-3f4a-5b6c7d8e9f0a",
+          "reservationId": "c5e6d7f8-a9b0-4c1d-2e3f-4a5b6c7d8e9f"
+        },
+        "eventId": "a3c2b1d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+        "eventType": "FlightReservationExpired",
+        "occurredOn": "2026-07-01T10:00:00.000Z"
+      },
+      "description": "a FlightReservationExpired event",
+      "matchingRules": {
+        "body": {
+          "$.aggregateId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.causationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.correlationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.expiredAt": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          },
+          "$.data.offerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "$.data.passengerId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.data.reservationId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.eventId": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            ]
+          },
+          "$.occurredOn": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^\\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d(\\.\\d+)?([+-][0-2]\\d:[0-5]\\d|Z)$"
+              }
+            ]
+          }
+        },
+        "metadata": {}
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "providerStates": [
+        {
+          "name": "an expired pending flight reservation exists"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "13.2.0"
+    },
+    "pactRust": {
+      "ffi": "0.4.22",
+      "models": "1.2.3"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "inventory-service"
+  }
+}

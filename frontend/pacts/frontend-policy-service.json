@@ -1,0 +1,76 @@
+{
+  "consumer": {
+    "name": "frontend"
+  },
+  "interactions": [
+    {
+      "description": "a policy validation request",
+      "providerStates": [
+        {
+          "name": "offer offer-1 with amount 450 USD is within policy"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/policies/validate",
+        "query": {
+          "amount": [
+            "450"
+          ],
+          "currency": [
+            "USD"
+          ],
+          "offerId": [
+            "offer-1"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "compliant": true
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.compliant": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "12.5.2"
+    },
+    "pactRust": {
+      "ffi": "0.4.20",
+      "models": "1.2.0"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "policy-service"
+  }
+}

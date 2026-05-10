@@ -1,0 +1,29 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2021",
+    "lib": ["ES2021"],
+    "outDir": "./dist",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@travel/shared": ["../packages/shared/src/index.ts"],
+      "@nestjs/microservices": ["./src/__stubs__/nestjs-microservices.stub"],
+      "@nestjs/microservices/*": ["./src/__stubs__/nestjs-microservices.stub"],
+      "typeorm": ["../payment-service/node_modules/typeorm"],
+      "typeorm/*": ["../payment-service/node_modules/typeorm/*"],
+      "@nestjs/typeorm": ["../payment-service/node_modules/@nestjs/typeorm"],
+      "@nestjs/typeorm/*": ["../payment-service/node_modules/@nestjs/typeorm/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

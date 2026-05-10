@@ -1,0 +1,204 @@
+{
+  "consumer": {
+    "name": "frontend"
+  },
+  "interactions": [
+    {
+      "description": "a search request for flights",
+      "providerStates": [
+        {
+          "name": "flights available for JFK to LAX on 2026-06-01"
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/inventory/flights/search",
+        "query": {
+          "adults": [
+            "1"
+          ],
+          "departureDate": [
+            "2026-06-01"
+          ],
+          "destination": [
+            "LAX"
+          ],
+          "origin": [
+            "JFK"
+          ]
+        }
+      },
+      "response": {
+        "body": {
+          "meta": {
+            "cached": false,
+            "count": 1,
+            "searchId": "test-search-id"
+          },
+          "offers": [
+            {
+              "airline": "American Airlines",
+              "arrivalTime": "2026-06-01T15:30:00Z",
+              "departureTime": "2026-06-01T10:00:00Z",
+              "destination": "LAX",
+              "duration": "5h 30m",
+              "id": "offer-1",
+              "origin": "JFK",
+              "price": {
+                "amount": 450,
+                "currency": "USD"
+              },
+              "stops": 0
+            }
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "matchingRules": {
+          "body": {
+            "$.meta": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.meta.count": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            },
+            "$.meta.searchId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$.offers[*].airline": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].arrivalTime": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].departureTime": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].destination": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].duration": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].origin": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].price": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].price.amount": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            },
+            "$.offers[*].price.currency": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.offers[*].stops": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "integer"
+                }
+              ]
+            }
+          },
+          "header": {},
+          "status": {}
+        },
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "12.5.2"
+    },
+    "pactRust": {
+      "ffi": "0.4.20",
+      "models": "1.2.0"
+    },
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  },
+  "provider": {
+    "name": "inventory-service"
+  }
+}
